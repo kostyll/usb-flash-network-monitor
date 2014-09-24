@@ -1,11 +1,18 @@
 import os
 
+import urllib2
+
+import bottle
+import simplejson
+
 import pyudev
 import evdev
 import usb.core
 import usb.util
 
 configuration_file = os.path.join(os.environ['HOME'],'registered_usb_devices')
+# master_ip = os.environ['USB_OBSERVER_IP']
+master_ip = "127.0.0.1"
 
 class USBFlashObserver(object):
     """
@@ -13,16 +20,8 @@ class USBFlashObserver(object):
     It has abilities to scan connected mass storage devices.
     """
 
-    _registered_usb_devices = [
-    """
-    Contains the serial numbers of all registered usb flash drives
-    """
-    ]
-    _online_devices = [
-    """
-    Contains the serials of connected usb flash devices
-    """
-    ]
+    _registered_usb_devices = []
+    _online_devices = []
 
     def __init__(self,reporter_instance):
         self.reporter=reporter_instance
@@ -68,7 +67,7 @@ class USBFlashObserver(object):
         Add serial device to online devices
         """
         if self._online_devices.count(serial) <= 0:
-            self.online_devices.append(serial)
+            self._online_devices.append(serial)
 
     def remove_online_device(self,serial):
         """
@@ -107,6 +106,8 @@ class USBFlashObserver(object):
             serial = device.serial_number
             if not self.check_serial_existance(serial):
                 unregistered_serials.add(serial)
+            else:
+                self.add_online_device(serial)
 
         self.report_unregistered_serial(unregistered_serials)
 
@@ -114,7 +115,13 @@ class USBFlashObserver(object):
         """
         Report about unregistered serial
         """
-        self.reporter.report("Serial {} is unregistered.".format(device))
+        self.reporter.report(device)
+
+    def get_registered_devices(self):
+        return self._registered_usb_devices
+
+    def get_online_devices(self):
+        return self._online_devices
 
 
 class Reporter(object):
@@ -122,13 +129,18 @@ class Reporter(object):
         self.loadconf()
 
     def loadconf(self):
-        pass
+        self.master_ip = master_ip
 
-    def report(self,message):
-        self._report(message)
+    def report(self,serial):
+        self._report(serial)
 
-    def _report(self,message):
-        print (message)
+    def _report(self,serial):
+        serials = list(serial)
+        for serial in serials:
+            try:
+                urllib2.urlopen('http://'+master_ip+':8090/unregistered/'+serial,timeout=2)
+            except:
+                pass
 
 
 def main():
@@ -139,7 +151,37 @@ def main():
     monitor.filter_by('block')
 
     usb_flash_observer = USBFlashObserver(reporter)
-    usb_flash_observer.add_device_serial('64I27UFQS8TK95JW')
+    # usb_flash_observer.add_device_serial('64I27UFQS8TK95JW')
+
+    request_handler = bottle.Bottle()
+
+    @request_handler.get('/device')
+    def show_online_devices():
+        return simplejson.dumps(usb_flash_observer.get_online_devices())
+
+    @request_handler.get('/registered')
+    def show_registered_devices():
+        return simplejson.dumps(usb_flash_observer.get_registered_devices())
+
+    @request_handler.post('/registered')
+    def register_device_serial():
+        try:
+            serial = bottle.request.forms.get('serial')
+            usb_flash_observer.add_device_serial(serial)
+            usb_flash_observer.saveconf()
+            return simplejson.dumps({'result':'ok'})
+        except Exception,e:
+            return simplejson.dumps({'result':'error'})
+
+    @request_handler.delete('/registered')
+    def delete_device_serial():
+        try:
+            serial = bottle.request.forms.get('serial')
+            usb_flash_observer.remove_device_serial(serial)
+            usb_flash_observer.saveconf()
+            return simplejson.dumps({'result':'ok'})
+        except Exception,e:
+            return simplejson.dumps({'result':'error','error':e})
 
     def log_envent(action,device):
         if action == "add":
@@ -150,6 +192,7 @@ def main():
 
     observer = pyudev.MonitorObserver(monitor,log_envent)
     observer.start()
+    bottle.run(request_handler,reloader=True)
     while True:
         pass
 
