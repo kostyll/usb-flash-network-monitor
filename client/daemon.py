@@ -143,6 +143,14 @@ class Reporter(object):
                 pass
 
 
+def check_sender(func):
+    def wrapper(*args,**kwargs):
+        if request['REMOTE_ADDR'] == master_ip:
+            return func(*args,**kwargs)
+        else:
+            return
+    return wrapper
+
 def main():
     reporter = Reporter()
 
@@ -156,14 +164,18 @@ def main():
     request_handler = bottle.Bottle()
 
     @request_handler.get('/device')
+    @check_sender
     def show_online_devices():
         return simplejson.dumps(usb_flash_observer.get_online_devices())
 
     @request_handler.get('/registered')
+    @check_sender
     def show_registered_devices():
+        if not check_sender(): return
         return simplejson.dumps(usb_flash_observer.get_registered_devices())
 
     @request_handler.post('/registered')
+    @check_sender
     def register_device_serial():
         try:
             serial = bottle.request.forms.get('serial')
@@ -174,6 +186,7 @@ def main():
             return simplejson.dumps({'result':'error'})
 
     @request_handler.delete('/registered')
+    @check_sender
     def delete_device_serial():
         try:
             serial = bottle.request.forms.get('serial')
