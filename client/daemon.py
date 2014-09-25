@@ -10,6 +10,8 @@ import evdev
 import usb.core
 import usb.util
 
+#TODO : transform loading configuration via configparser module
+
 configuration_file = os.path.join(os.environ['HOME'],'registered_usb_devices')
 # master_ip = os.environ['USB_OBSERVER_IP']
 master_ip = "127.0.0.1"
@@ -27,14 +29,19 @@ class USBFlashObserver(object):
         self.reporter=reporter_instance
         self.loadconf()
 
+    def load_registered_serials_from_data(self,data):
+        """
+        Add's every serial from iterable object to registered devices list
+        """
+        for serial in data:
+            serial._registered_usb_devices.append(serial.strip('\n'))
+
     def loadconf(self):
         """
         Load configuration: a list of registered devices
         """
         try:
-            with open(configuration_file,'rt') as f:
-                for serial in f:
-                    self._registered_usb_devices.append(serial.strip('\n'))
+            self.load_registered_serials_from_data(open(configuration_file,'rt'))
         except IOError:
             pass
         self.check_unregistered_devices()
@@ -46,6 +53,17 @@ class USBFlashObserver(object):
         with open(configuration_file,'wt') as f:
             for serial in self._registered_usb_devices:
                 f.write("{}\n".format(serial))
+
+    def update_master_conf(self):
+        """
+        Makes request to the admin.-server to retrive general list
+        of allowed(registered) serial numbers
+        """
+        try:
+            general_serials_list = urllib2.urlopen('http://'+master_ip+'/general',timeout=5)
+            self.load_registered_serials_from_data(general_serials_list)
+        except Exception,e:
+            pass
 
     def add_device_serial(self,serial):
         """
@@ -118,20 +136,25 @@ class USBFlashObserver(object):
         self.reporter.report(device)
 
     def get_registered_devices(self):
+
         return self._registered_usb_devices
 
     def get_online_devices(self):
+
         return self._online_devices
 
 
 class Reporter(object):
     def __init__(self):
+
         self.loadconf()
 
     def loadconf(self):
+
         self.master_ip = master_ip
 
     def report(self,serial):
+
         self._report(serial)
 
     def _report(self,serial):
@@ -166,6 +189,7 @@ def main():
     @request_handler.get('/device')
     @check_sender
     def show_online_devices():
+
         return simplejson.dumps(usb_flash_observer.get_online_devices())
 
     @request_handler.get('/registered')
