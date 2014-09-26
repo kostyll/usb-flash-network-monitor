@@ -3,6 +3,12 @@ from bottle import run, request, Bottle
 
 import simplejson
 
+import html
+
+from web_face_gen_templatete import render_html
+from utils import _
+
+
 #TODO : transform loading configuration via configparser module
 
 # netmask = "192.168.0.11-14,17,18,19"
@@ -81,6 +87,7 @@ class GeneralDataProvider(object):
         except ValueError:
             return False
 
+
 class UnregisteredMassStorageObserver(object):
 
     okay = simplejson.dumps({'result':'ok'})
@@ -101,6 +108,23 @@ class UnregisteredMassStorageObserver(object):
                 return okay
             except Exception,e:
                 return error(str(e))
+
+
+def rendered(func):
+    def wrapper(self,ctx):
+        html.context = html.StrContext()
+        carred_func = lambda *args: func(self,args[0])
+        return render_html(ctx, carred_func)
+    return wrapper
+
+class WebFace(object):
+    def __init__(self):
+        self.ctx = {}
+    @rendered
+    def index(self,ctx):
+        with DIV.container_fluid as out:
+            out << "Ingex Page"
+        return out
 
 
 request_handler = Bottle()

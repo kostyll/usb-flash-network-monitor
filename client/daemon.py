@@ -5,54 +5,52 @@ import urllib2
 import bottle
 import simplejson
 
+import configparser
+
 import pyudev
 import evdev
 import usb.core
 import usb.util
 
-#TODO : transform loading configuration via configparser module
-
 configuration_file = os.path.join(os.environ['HOME'],'registered_usb_devices')
-# master_ip = os.environ['USB_OBSERVER_IP']
-master_ip = "127.0.0.1"
 
-class USBFlashObserver(object):
-    """
-    USB device observer.
-    It has abilities to scan connected mass storage devices.
-    """
-
-    _registered_usb_devices = []
-    _online_devices = []
-
-    def __init__(self,reporter_instance):
-        self.reporter=reporter_instance
+class ConfigManager(object):
+    def __init__(self):
+        """
+        Initialization
+        """
         self.loadconf()
-
-    def load_registered_serials_from_data(self,data):
-        """
-        Add's every serial from iterable object to registered devices list
-        """
-        for serial in data:
-            serial._registered_usb_devices.append(serial.strip('\n'))
 
     def loadconf(self):
         """
-        Load configuration: a list of registered devices
+        Load configuration from configuration file
         """
+        self._config = configparser.ConfigParser()
         try:
-            self.load_registered_serials_from_data(open(configuration_file,'rt'))
+            self._config.read(configuration_file)
         except IOError:
-            pass
-        self.check_unregistered_devices()
+            print("Configuration file({}) read-error.".format(configuration_file))
+            os.sys.exit(-1)
+        self.config = {}
+        self.config['master_ip'] = self._config['ADMIN']['IP']
+        self.config['serials'] = [key for key in self._config['SERIALS'].keys()]
 
     def saveconf(self):
         """
-        Save configuration: a new list of registered devices
+        Save configuration to the configuration file
         """
-        with open(configuration_file,'wt') as f:
-            for serial in self._registered_usb_devices:
-                f.write("{}\n".format(serial))
+        self._config['SERIALS'] = {serial:0 for serial in self.config['serials']}
+        self._config.write(open(configuration_file,'wt'))
+        os.sys.exit(-1)
+
+    def add_general_serial(self,serial):
+        """
+        Add general serial to configuration
+        """
+        try:
+            self.config['serials'].index(serial)
+        except ValueError:
+            self.config['serials'].append(serial)
 
     def update_master_conf(self):
         """
@@ -60,25 +58,63 @@ class USBFlashObserver(object):
         of allowed(registered) serial numbers
         """
         try:
-            general_serials_list = urllib2.urlopen('http://'+master_ip+'/general',timeout=5)
-            self.load_registered_serials_from_data(general_serials_list)
+            general_serials_list = urllib2.urlopen('http://'+self.config['master_ip']+'/general',timeout=5)
+            for serial in general_serials_list.split('\n'):
+                self.add_general_serial(serial)
         except Exception,e:
             pass
+
+    def remove_general_serial(self,serial):
+        """
+        Remove serial from general serials list in configuration
+        """
+        try:
+            self.config['serials'].index(serial)
+            self.config['serials'].remove(serial)
+        except ValueError:
+            pass
+
+
+class USBFlashObserver(object):
+    """
+    USB device observer.
+    It has abilities to scan connected mass storage devices
+    and recive notification about new device installation into the system.
+    """
+
+    _online_devices = []
+
+    def __init__(self,reporter,configurator):
+        """
+        Initialize.
+        """
+        self.reporter=reporter
+        self.configurator=configurator
+        self.loadconf()
+
+    def loadconf(self):
+        """
+        Load configuration from configurator instance
+        """
+        self._registered_usb_devices = []
+        for serial in self.configurator.config['serials']:
+            self._registered_usb_devices.append(serial)
 
     def add_device_serial(self,serial):
         """
         Add device serial to registered list
         """
         if self._registered_usb_devices.count(serial) == 0:
-            self._registered_usb_devices.append(serial)
+            self.configurator.add_general_serial(serial)
+            self.loadconf()
 
     def remove_device_serial(self,serial):
         """
         Remove device serial from registered devices list
         """
         if self._registered_usb_devices.count(serial) > 0:
-            while self._registered_usb_devices.count(serial) > 0:
-                self._registered_usb_devices.remove(serial)
+            self.configurator.remove_general_serial(serial)
+            self.loadconf()
 
     def add_online_device(self,serial):
         """
@@ -135,33 +171,50 @@ class USBFlashObserver(object):
         """
         self.reporter.report(device)
 
-    def get_registered_devices(self):
-
+    @property
+    def registered_serials(self):
+        """
+        Returns all registered mass storage serials
+        """
         return self._registered_usb_devices
 
-    def get_online_devices(self):
-
+    @property
+    def online_serials(self):
+        """
+        Returns online mass storage serials
+        """
         return self._online_devices
 
 
 class Reporter(object):
-    def __init__(self):
 
+    def __init__(self,configurator):
+        """
+        Initialization
+        """
+        self.configurator = configurator
         self.loadconf()
 
     def loadconf(self):
-
-        self.master_ip = master_ip
+        """
+        In general saves master ip-address
+        """
+        self.master_ip = self.configurator.config['master_ip']
 
     def report(self,serial):
-
+        """
+        Report about unregistered serial
+        """
         self._report(serial)
 
     def _report(self,serial):
+        """
+        Make request to master about unregistered serial number
+        """
         serials = list(serial)
         for serial in serials:
             try:
-                urllib2.urlopen('http://'+master_ip+':8090/unregistered/'+serial,timeout=2)
+                urllib2.urlopen('http://'+self.master_ip+':8090/unregistered/'+serial,timeout=2)
             except:
                 pass
 
@@ -175,13 +228,14 @@ def check_sender(func):
     return wrapper
 
 def main():
-    reporter = Reporter()
+    configurator = ConfigManager()
+    reporter = Reporter(configurator)
 
     context = pyudev.Context()
     monitor = pyudev.Monitor.from_netlink(context)
     monitor.filter_by('block')
 
-    usb_flash_observer = USBFlashObserver(reporter)
+    usb_flash_observer = USBFlashObserver(reporter,configurator)
     # usb_flash_observer.add_device_serial('64I27UFQS8TK95JW')
 
     request_handler = bottle.Bottle()
@@ -190,13 +244,13 @@ def main():
     @check_sender
     def show_online_devices():
 
-        return simplejson.dumps(usb_flash_observer.get_online_devices())
+        return simplejson.dumps(usb_flash_observer.online_serials)
 
     @request_handler.get('/registered')
     @check_sender
     def show_registered_devices():
         if not check_sender(): return
-        return simplejson.dumps(usb_flash_observer.get_registered_devices())
+        return simplejson.dumps(usb_flash_observer.registered_serials)
 
     @request_handler.post('/registered')
     @check_sender
