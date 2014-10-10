@@ -160,6 +160,7 @@ class USBFlashObserver(object):
             serial = device.serial_number
             if not self.check_serial_existance(serial):
                 unregistered_serials.add(serial)
+                self.block_unregistered_device(device)
             else:
                 self.add_online_device(serial)
 
@@ -170,6 +171,12 @@ class USBFlashObserver(object):
         Report about unregistered serial
         """
         self.reporter.report(device)
+
+    def block_unregistered_serial(self,device):
+        """
+        Deattach device driver
+        """
+        pass
 
     @property
     def registered_serials(self):
