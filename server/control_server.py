@@ -275,7 +275,7 @@ class WebFace(object):
                                           placeholder=_("IP description"),
                                           class_="form-control"
                                           )
-                                BUTTON(
+                                A(
                                        _("Add new IP"),
                                        id_="machine_button",
                                        type="submit",
