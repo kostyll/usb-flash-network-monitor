@@ -1,7 +1,7 @@
 import os
 from copy import deepcopy
 import bottle
-from bottle import run, request, Bottle, static_file
+from bottle import run, request, Bottle, static_file, response
 
 import simplejson
 
@@ -49,17 +49,21 @@ class IPField(peewee.Field):
                 raise WrongIPAddressStrRepresentation(value)
 
     def db_value(self,value):
-        octets = map(lambda y: (value >> y), self.octet_offsets)
-        octets[1] = octets[1] % 2**8
-        octets[2] = octets[2] % 2**16
-        octets[3] = octets[3] % 2**24
-        return ".".join(map(int,octets))
-
-    def python_value(self,value):
         self.check_str_representation(value)
         octets = map(int, str(value).split('.'))
         octets = map(lambda x,y: x<<y, octets,self.octet_offsets)
-        return sum(octets)
+        result = sum(octets)        
+        # print ('result = {}'.format(result))
+        return  result
+
+    def python_value(self,value):
+        octets = map(lambda y: (value >> y), self.octet_offsets)
+        # print ("octets {}".format(octets))
+        octets = map(lambda x: x % (2**8), octets)
+        # print ("octets {}".format(octets))
+        result = ".".join(map(str,octets))
+        # print ('result = {}'.format(result))
+        return result
 
 
 peewee.SqliteDatabase.register_fields({'int':'int'})
@@ -74,6 +78,8 @@ class BaseModel(peewee.Model):
 class Client(BaseModel):
 
     ip_addr = IPField(unique=True)
+
+    description = peewee.CharField(max_length=200)
 
 
 class GeneralSerial(BaseModel):
@@ -200,13 +206,21 @@ class WebFace(object):
 
         machines_table = "machines_table"
 
-        caption_machine_ip="Machine IP"
-        caption_machine_desc="Machine description"
-        caption_machine_remove="Remove machine"
+        caption_machine_ip=_("Machine IP")
+        caption_machine_desc=_("Machine description")
+        caption_machine_actions=_("Actions")
+
+        get_action_name = lambda x: _(" ".join(x.split('_')))
+        get_action_class = lambda x: "class_"+x
+
+        action_remove="machine_remove"
+        caption_machine_remove = get_action_name(action_remove)
+
         machines_columns = [
-            (caption_machine_ip,dict(align="center",key="ip")),
+            ("",dict(key="state",data_checkbox="true",align="center")),
+            (caption_machine_ip,dict(align="center",key="ip_addr")),
             (caption_machine_desc,dict(align="center",key="description")),
-            (caption_machine_remove,dict(align="center",href="#",action=caption_machine_remove))
+            # (caption_machine_actions,dict(align="center",href="#",action=[action_remove]))
         ]
 
         get_field_name = lambda x: ''.join(x.split(' ')).lower()
@@ -219,45 +233,70 @@ class WebFace(object):
                     A(_("General serials"),href="#general",data_toggle="tab")
                 with LI:
                     A(_("Special serials"),href="#special",data_toggle="tab")
+                with LI:
+                    A(_("New machine"),href="#new_machine",data_toggle="tab")
             with DIV.tab_content:
                 with DIV(id_="machines").tab_pane.active:
                     with DIV.row_fluid:
                         H4(_("Installed machines:"),align="center")
                     with DIV.row_fluid:
                         with DIV.span12:
+                            with DIV(id_="custom_machines_toolbar"):
+                                BUTTON(_(get_action_name(action_remove)),
+                                    type="submit",
+                                    class_="btn btn-primary",
+                                    id_="remove_machine_button",
+                                    data_method="remove",
+                                    )
                             with TABLE(
                                        id_=machines_table,
                                        data_sort_name="sheduled",
                                        data_sort_order="asc",
+                                       data_toggle="table",
                                        width="100%",
                                        align="center",
-                                       striped=True,
+                                       pagination="true",
+                                       data_search="true",
+                                       data_show_refresh="true",
+                                       data_show_toggle="true",
+                                       data_show_columns="true",
+                                       data_toolbar="#custom_machines_toolbar",
+                                       # striped=True,
+                                       data_url='/ip'
                                        ):
                                 with THEAD:
                                     with TR:
                                         for column in machines_columns:
                                             TH(
                                                column[0],
-                                               data_field=get_field_name(column[0]),
+                                               data_field=column[1].get('key',None),
                                                data_sortable="true",
-                                               data_align=column[1]['align']
+                                               data_align=column[1]['align'],
+                                               data_checkbox="true" if column[1].get('data_checkbox',None) == "true" else "false",
                                                )
-                                with TBODY:
-                                    for client in Client.select():
-                                        with TR:
-                                            for column in machines_columns:
-                                                if column[1].has_key("key"):
-                                                    TD(client.ip_addr)
-                                                else:
-                                                    with TD:
-                                                        A(
-                                                          _(column[1]['action']),
-                                                          class_="icon-large btn button_kill remove_ip_link",
-                                                          )
+                                # with TBODY:
+                                #     for client in Client.select():
+                                #         with TR:
+                                #             for column in machines_columns:
+                                #                 if column[1].has_key("key"):
+                                #                     TD(getattr(client,column[1]['key']))
+                                #                 else:
+                                #                     with TD:
+                                #                         for action in column[1]['action']:
+                                #                             A(
+                                #                               get_action_name(action),
+                                #                               class_="btn btn-success "+get_action_class(action),
+                                #                               )
+
+                with DIV(id_="general").tab_pane:
+                    out << "bbb"
+                with DIV(id_="special").tab_pane:
+                    out << "ccc"
+                with DIV(id_="new_machine").tab_pane:
                     with DIV.row_fluid:
                         H4(_("Add new machine"),align="center")
                     with DIV.row_fluid:
-                        with DIV.span4.offset4:
+                        with DIV.span4:
                             with FORM(role="form",action="#"):
                                 with DIV.form_group:
                                     LABEL(_("IP address"),for_="ip_address")
@@ -282,17 +321,31 @@ class WebFace(object):
                                        class_="btn btn-primary",
                                        )
 
-
-                with DIV(id_="general").tab_pane:
-                    out << "bbb"
-                with DIV(id_="special").tab_pane:
-                    out << "ccc"
-
         return out
 
+    def get_ips(self):
+        return simplejson.dumps(map(lambda x: {'ip_addr':x.ip_addr,'description':x.description},Client.select()))
+
     def add_new_ip(self):
-        # ip = request.forms
-        print ("Adding...")
+        ip = request.forms.get('ip')
+        descr = request.forms.get('descr')
+        print ("Adding...{}, {}".format(ip,descr))
+        try:
+            Client.create(ip_addr=ip,description=descr)
+        except peewee.IntegrityError:
+            pass
+        return "Ok"
+
+    def remove_ip(self):
+        try:
+            ip_addr = request.forms.ip
+            print ("ip_addr = %s" % ip_addr)
+            client = Client.get(Client.ip_addr == ip_addr)
+            print ("Client = %s" % client)
+            client.delete_instance()
+        except Exception,e:
+            print (e)
+            pass
 
 # page_os = '/os'
 # page_tasks = '/general'
@@ -333,9 +386,18 @@ def serve_image_file(path):
 def index_page():
     return web_face.index({'menu_links':[]})
 
-@request_handler.post('/ip')
+@request_handler.put('/ip')
 def add_machine():
     return web_face.add_new_ip()
+
+@request_handler.get('/ip')
+def list_machines():
+    response.content_type = 'application/json; charset=latin9'
+    return web_face.get_ips()
+
+@request_handler.delete('/ip')
+def remove_machine():
+    return web_face.remove_ip()
 
 def main():
     db.connect()
