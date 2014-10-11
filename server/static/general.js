@@ -11,17 +11,30 @@ var is_ip_correct = function(ip) {
 }
 
 machines_url = '/ip';
+general_
 
 var update_machines_table = function(){
-    $.ajax({
-        url:machines_url,
-        type:'GET',
-        success:function(data){
-            data.forEach(function(item,index,array){
-                alert(item);
-            });
-        },
-    });
+    // $.ajax({
+    //     url:machines_url,
+    //     type:'GET',
+    //     success:function(data){
+    //         data.forEach(function(item,index,array){
+    //             alert(item);
+    //         });
+    //     },
+    // });
+    var table = $('#machines_table');
+    table.bootstrapTable("refresh");
+}
+
+var update_general_serials_table = function(){
+    var table = $('#general_serials_table');
+    table.bootstrapTable("refresh");
+}
+
+var add_new_general_serial_number = function(){
+    number = gebi_value("#general_serial_number");
+    $.ajax
 }
 
 var add_new_machine = function() {

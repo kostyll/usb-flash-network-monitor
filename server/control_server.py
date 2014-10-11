@@ -52,7 +52,7 @@ class IPField(peewee.Field):
         self.check_str_representation(value)
         octets = map(int, str(value).split('.'))
         octets = map(lambda x,y: x<<y, octets,self.octet_offsets)
-        result = sum(octets)        
+        result = sum(octets)
         # print ('result = {}'.format(result))
         return  result
 
@@ -92,72 +92,6 @@ class ClientSerial(GeneralSerial):
     client = peewee.ForeignKeyField(Client)
 
 
-class ClientsManager(object):
-
-    _clients_ips = []
-
-    def __init__(self):
-
-        pass
-
-    @property
-    def clients_ips(self):
-
-        return self._clients_ips
-
-    def client_ip_existance(self,ip):
-        try:
-            self.clients_ips.index(ip)
-            return True
-        except ValueError:
-            return False
-
-    def add_client_ip(self,ip):
-        if not self.client_ip_existance(ip):
-            self._clients_ips.append(ip)
-
-    def remove_client_ip(self,ip):
-        if self.client_ip_existance(ip):
-            self._clients_ips.remove(ip)
-
-
-class GeneralDataProvider(object):
-
-    _general_serials = []
-
-    def __init__(self):
-
-        self.loadconf()
-
-    @property
-    def general_serials(self):
-
-        return self._general_serials
-
-    def loadconf(self):
-
-        pass
-
-    def saveconf(self):
-
-        pass
-
-    def add_serial_to_general(self,serial):
-        if not self.serial_existance(serial):
-            self._general_serials.append(serial)
-
-    def remove_serial_from_general(self,serial):
-        if self.serial_existance(serial):
-            self._general_serials.remove(serial)
-
-    def serial_existance(self,serial):
-        try:
-            self.general_serials.index(serial)
-            return True
-        except ValueError:
-            return False
-
-
 class UnregisteredMassStorageObserver(object):
 
     okay = simplejson.dumps({'result':'ok'})
@@ -180,47 +114,56 @@ class UnregisteredMassStorageObserver(object):
                 return error(str(e))
 
 
-def rendered(func):
-    def wrapper(self,ctx):
-        html.context = html.StrContext()
-        carred_func = lambda *args: func(self,args[0])
-        res = str(render_html(ctx, carred_func))
-        print (res)
-        return res
-    return wrapper
-
 class WebFace(object):
+    class rendered(object):
+
+        def __call__(self,func):
+            def wrapper(class_instance,ctx):
+                context = deepcopy(class_instance.ctx)
+                context.update(ctx)
+                ctx = context
+                html.context = html.StrContext()
+                carred_func = lambda *args: func(self,args[0])
+                res = str(render_html(ctx, carred_func))
+                # print (res)
+                return res
+            return wrapper
+
     def __init__(self,ctx=None):
         if ctx is None:
             ctx = {}
         self.ctx = ctx
 
-    @rendered
+    @rendered()
     def index(self,ctx=None):
-        if ctx is None:
-            ctx = self.ctx
-        else:
-            context = deepcopy(self.ctx)
-            context.update(ctx)
-            ctx = context
+        print ("ctx=",ctx)
 
         machines_table = "machines_table"
-
-        caption_machine_ip=_("Machine IP")
-        caption_machine_desc=_("Machine description")
-        caption_machine_actions=_("Actions")
+        general_serials_table = "general_serials_table"
 
         get_action_name = lambda x: _(" ".join(x.split('_')))
+        get_button_name = lambda action: action +'_button'
         get_action_class = lambda x: "class_"+x
 
         action_remove="machine_remove"
         caption_machine_remove = get_action_name(action_remove)
 
+        caption_machine_ip=_("Machine IP")
+        caption_machine_desc=_("Machine description")
+        caption_machine_actions=_("Actions")
         machines_columns = [
             ("",dict(key="state",data_checkbox="true",align="center")),
             (caption_machine_ip,dict(align="center",key="ip_addr")),
-            (caption_machine_desc,dict(align="center",key="description")),
+            (caption_machine_desc,dict(align="left",key="description")),
             # (caption_machine_actions,dict(align="center",href="#",action=[action_remove]))
+        ]
+
+        caption_general_serial_number = _("Serial number")
+        remove_general_serial_action = "remove_general_serial"
+        add_new_general_serial_action = "add_new_general_serial"
+        general_serials_columns = [
+            ("",dict(key="state",data_checkbox="true",align="center")),
+            (caption_general_serial_number,dict(align="left",key="number")),
         ]
 
         get_field_name = lambda x: ''.join(x.split(' ')).lower()
@@ -289,7 +232,57 @@ class WebFace(object):
                                 #                               )
 
                 with DIV(id_="general").tab_pane:
-                    out << "bbb"
+                    with DIV.row_fluid:
+                        H4(_("General registered serial numbers"))
+                    with DIV.row_fluid:
+                        with DIV.span12:
+                            with DIV(id_="custom_general_serials_toolbar"):
+                                with DIV(role="form").form_inline:
+                                    BUTTON(_(get_action_name(remove_general_serial_action)),
+                                       type="submit",
+                                       class_="btn btn-primary",
+                                       id_=get_button_name(remove_general_serial_action),
+                                       data_method="remove",
+                                       )
+                                    INPUT(
+                                          id_="general_serial_number",
+                                          type="text",
+                                          placeholder=_("type here new serial number"),
+                                          class_="form-control",
+                                          )
+                                    BUTTON(
+                                           _(get_action_name(add_new_general_serial_action)),
+                                           id_=get_button_name(add_new_general_serial_action),
+                                           type="submit",
+                                           class_="btn btn-primary",
+                                           )
+
+                            with TABLE(
+                                       id_=general_serials_table,
+                                       data_sort_name="sheduled",
+                                       data_sort_order="asc",
+                                       data_toggle="table",
+                                       width="100%",
+                                       align="center",
+                                       pagination="true",
+                                       data_search="true",
+                                       data_show_refresh="true",
+                                       data_show_toggle="true",
+                                       data_show_columns="true",
+                                       data_toolbar="#custom_general_serials_toolbar",
+                                       # striped=True,
+                                       data_url='/general'
+                                       ):
+                                with THEAD:
+                                    with TR:
+                                        for column in general_serials_columns:
+                                            TH(
+                                               column[0],
+                                               data_field=column[1].get('key',None),
+                                               data_sortable="true",
+                                               data_align=column[1]['align'],
+                                               data_checkbox="true" if column[1].get('data_checkbox',None) == "true" else "false",
+                                               )
                 with DIV(id_="special").tab_pane:
                     out << "ccc"
                 with DIV(id_="new_machine").tab_pane:
@@ -347,22 +340,9 @@ class WebFace(object):
             print (e)
             pass
 
-# page_os = '/os'
-# page_tasks = '/general'
-# page_webcam = '/webcam'
-# page_processes = '/processes'
-
-# menu_links = [
-#         ('Os state','New','btn-success ',page_os),
-#         ('Webcam','New','btn-primary ',page_webcam),
-#         ('Tasks',get_tasks_count,'btn-success ',page_tasks),
-#         ('Processes',get_processes_count,'btn-success ',page_processes)
-#     ]
-
-
 request_handler = Bottle()
-general_data_provider = GeneralDataProvider()
-web_face = WebFace(ctx={'ip':'/ip'})
+unregistered_devices = UnregisteredMassStorageObserver()
+web_face = WebFace(ctx={'company':'USB monitor','ip':'/ip'})
 
 @request_handler.get('/unregistered/<serial:re:[a-zA-Z0-9]+>')
 def alert_unregisered_serial(serial):
@@ -372,7 +352,7 @@ def alert_unregisered_serial(serial):
 @request_handler.get('/general')
 def show_general_serials():
 
-    return simplejson.dumps(general_data_provider.general_serials)
+    return simplejson.dumps(map(lambda x: {'number':x.number},GeneralSerial.select()))
 
 @request_handler.route('/static/<path:path>')
 def serve_static_file(path):

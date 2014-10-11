@@ -135,10 +135,12 @@ def layout(ctx):
     return c
 
 def render_html(ctx,page):
+    # print ctx
     with HTML5 as c:
         header(ctx)
         with DIV.navbar.navbar_static_top:
             general_body(ctx)
+        # print (page)
         page(ctx)
     return c
 
