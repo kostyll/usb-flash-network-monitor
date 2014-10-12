@@ -11,7 +11,7 @@ var is_ip_correct = function(ip) {
 }
 
 machines_url = '/ip';
-general_
+general_serials_url='/general';
 
 var update_machines_table = function(){
     // $.ajax({
@@ -33,8 +33,19 @@ var update_general_serials_table = function(){
 }
 
 var add_new_general_serial_number = function(){
-    number = gebi_value("#general_serial_number");
-    $.ajax
+    number = gebi_value("general_serial_number");
+    input_element =gebi ('general_serial_number');
+    input_element.value = '';
+    $.ajax({
+        url:general_serials_url,
+        type:'PUT',
+        data:{
+            number:number
+        },
+        success:function(data){
+            update_general_serials_table();
+        },
+    });
 }
 
 var add_new_machine = function() {
@@ -78,9 +89,33 @@ var remove_machine = function(ip){
     });
 }
 
+var remove_general_serials = function(){
+    var table = $('#general_serials_table');
+    var selects = table.bootstrapTable('getSelections');
+    selects.forEach(function(item,index,array){
+        remove_general_serial(item.number);
+    });
+    update_general_serials_table();
+}
+
+var remove_general_serial = function(number){
+    $.ajax({
+        url:general_serials_url,
+        type:'DELETE',
+        data:{
+            number:number,
+        },
+        success:function(data){
+            //alert("Removed!");
+        },
+    });
+}
+
 var prepare = function() {
     gebi("machine_button").onclick = add_new_machine;
     gebi("remove_machine_button").onclick = remove_machines;
+    gebi("remove_general_serial_button").onclick = remove_general_serials;
+    gebi("add_new_general_serial_button").onclick = add_new_general_serial_number;
     // alert("Prepared");
 }
 

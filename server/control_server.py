@@ -125,7 +125,7 @@ class WebFace(object):
                 html.context = html.StrContext()
                 carred_func = lambda *args: func(self,args[0])
                 res = str(render_html(ctx, carred_func))
-                # print (res)
+                print (res)
                 return res
             return wrapper
 
@@ -340,6 +340,21 @@ class WebFace(object):
             print (e)
             pass
 
+    def add_new_general_serial_number(self):
+        number = request.forms.number
+        GeneralSerial.create(number=number)
+        return "Ok"
+
+    def remove_general_serial_number(self):
+        number = request.forms.number
+        try:
+            general_serial = GeneralSerial.get(GeneralSerial.number == number)
+            general_serial.delete_instance()
+        except Exception,e:
+            print (e)
+            pass
+
+
 request_handler = Bottle()
 unregistered_devices = UnregisteredMassStorageObserver()
 web_face = WebFace(ctx={'company':'USB monitor','ip':'/ip'})
@@ -353,6 +368,14 @@ def alert_unregisered_serial(serial):
 def show_general_serials():
 
     return simplejson.dumps(map(lambda x: {'number':x.number},GeneralSerial.select()))
+
+@request_handler.put('/general')
+def add_new_serial_number():
+    return web_face.add_new_general_serial_number()
+
+@request_handler.delete('/general')
+def remove_general_serial_number():
+    return web_face.remove_general_serial_number()
 
 @request_handler.route('/static/<path:path>')
 def serve_static_file(path):
