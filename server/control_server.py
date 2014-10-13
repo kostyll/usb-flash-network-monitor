@@ -151,10 +151,13 @@ class WebFace(object):
         caption_machine_ip=_("Machine IP")
         caption_machine_desc=_("Machine description")
         caption_machine_actions=_("Actions")
+        caption_special_serials=_("Special serials")
         machines_columns = [
             ("",dict(key="state",data_checkbox="true",align="center")),
             (caption_machine_ip,dict(align="center",key="ip_addr")),
             (caption_machine_desc,dict(align="left",key="description")),
+            (caption_special_serials,dict(align="left",key="special_serial_numbers")),
+            (caption_machine_actions,dict(align="center")),
             # (caption_machine_actions,dict(align="center",href="#",action=[action_remove]))
         ]
 
@@ -174,8 +177,6 @@ class WebFace(object):
                     A(_("Machines"),class_="active",href="#machines",data_toggle="tab")
                 with LI:
                     A(_("General serials"),href="#general",data_toggle="tab")
-                with LI:
-                    A(_("Special serials"),href="#special",data_toggle="tab")
                 with LI:
                     A(_("New machine"),href="#new_machine",data_toggle="tab")
             with DIV.tab_content:
@@ -283,8 +284,6 @@ class WebFace(object):
                                                data_align=column[1]['align'],
                                                data_checkbox="true" if column[1].get('data_checkbox',None) == "true" else "false",
                                                )
-                with DIV(id_="special").tab_pane:
-                    out << "ccc"
                 with DIV(id_="new_machine").tab_pane:
                     with DIV.row_fluid:
                         H4(_("Add new machine"),align="center")
@@ -317,7 +316,11 @@ class WebFace(object):
         return out
 
     def get_ips(self):
-        return simplejson.dumps(map(lambda x: {'ip_addr':x.ip_addr,'description':x.description},Client.select()))
+        return simplejson.dumps(map(lambda x: {
+            'ip_addr':x.ip_addr,
+            'description':x.description,
+            'special_serial_numbers':[],
+            },Client.select()))
 
     def add_new_ip(self):
         ip = request.forms.get('ip')
