@@ -23,8 +23,37 @@ var update_machines_table = function(){
     //         });
     //     },
     // });
-    var table = $('#machines_table');
-    table.bootstrapTable("refresh");
+    // var table = $('#machines_table');
+    // table.bootstrapTable("refresh");
+    get_machines();
+}
+
+var update_machines_table_action_buttons = function(){
+    var table = $("#machines_table");
+    
+}
+
+var get_machines = function(){
+    $.ajax({
+        url:machines_url,
+        type:'GET',
+        success:function(data){
+            rows = [];
+            data.forEach(function(item,index,array){
+                // action_buttons = document.createElement('div');
+                action_buttons = null;
+
+                rows.push({
+                    ip_addr:item.ip_addr,
+                    description:item.description,
+                    special_serial_numbers:item.special_serial_numbers,
+                    actions:action_buttons,
+                });
+            });
+            $("#machines_table").bootstrapTable('load',{data:rows});            
+            alert(rows);            
+        },
+    });
 }
 
 var update_general_serials_table = function(){
@@ -112,6 +141,7 @@ var remove_general_serial = function(number){
 }
 
 var prepare = function() {
+    update_machines_table();
     gebi("machine_button").onclick = add_new_machine;
     gebi("remove_machine_button").onclick = remove_machines;
     gebi("remove_general_serial_button").onclick = remove_general_serials;

@@ -206,7 +206,8 @@ class WebFace(object):
                                        data_show_columns="true",
                                        data_toolbar="#custom_machines_toolbar",
                                        # striped=True,
-                                       data_url='/ip'
+                                       # data_url='/ip',
+                                       # data='get_machines()',
                                        ):
                                 with THEAD:
                                     with TR:
