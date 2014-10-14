@@ -157,7 +157,7 @@ class WebFace(object):
             (caption_machine_ip,dict(align="center",key="ip_addr")),
             (caption_machine_desc,dict(align="left",key="description")),
             (caption_special_serials,dict(align="left",key="special_serial_numbers")),
-            (caption_machine_actions,dict(align="center")),
+            (caption_machine_actions,dict(align="center",key="actions,")),
             # (caption_machine_actions,dict(align="center",href="#",action=[action_remove]))
         ]
 
@@ -207,7 +207,7 @@ class WebFace(object):
                                        data_toolbar="#custom_machines_toolbar",
                                        # striped=True,
                                        # data_url='/ip',
-                                       # data='get_machines()',
+                                       data='get_machines()',
                                        ):
                                 with THEAD:
                                     with TR:

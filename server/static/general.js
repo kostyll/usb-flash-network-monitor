@@ -30,7 +30,7 @@ var update_machines_table = function(){
 
 var update_machines_table_action_buttons = function(){
     var table = $("#machines_table");
-    
+
 }
 
 var get_machines = function(){
@@ -39,6 +39,7 @@ var get_machines = function(){
         type:'GET',
         success:function(data){
             rows = [];
+            table = $("#machines_table");
             data.forEach(function(item,index,array){
                 // action_buttons = document.createElement('div');
                 action_buttons = null;
@@ -50,8 +51,9 @@ var get_machines = function(){
                     actions:action_buttons,
                 });
             });
-            $("#machines_table").bootstrapTable('load',{data:rows});            
-            alert(rows);            
+            table.bootstrapTable('load',{data:rows});
+            // alert(rows);
+            // alert(table.bootstrapTable('getData'));
         },
     });
 }
