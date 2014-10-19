@@ -33,6 +33,50 @@ var update_machines_table_action_buttons = function(){
     
 }
 
+var process_machine_action_edit = function(data){
+    // alert("edit,"+data);
+    $("#edit_machine_modal_form").target = data;
+    $.ajax({
+        url:'/ip/'+data,
+        type:'GET',
+        success:function(data){
+            rows = [];
+            data[0].special_serial_numbers.forEach(function(item,index,array){
+                rows.push({
+                    serial_number:item,
+                });
+            });
+            // alert(rows);
+            $("#edit_machine_table").bootstrapTable('load',{data:rows});
+        }
+    });    
+    $("#edit_machine_modal_form").modal('show');
+    get_machines();
+}
+
+var process_machine_action_remove = function(data){
+    alert("remove"+data);
+    get_machines();
+}
+
+actions_formatter = function(value){
+    console.log("formatting "+ value);
+    // return value;
+    actions = value.actions;
+    result = "";
+    actions.forEach(function(item,index,array){
+        if (item == "edit"){
+            result += "<a class='btn btn-primary' onclick='process_machine_action_"+item+"(\""+value.item+"\")'>"+item+"</a>\n";
+        } else if (item == "remove") {
+            result += "<a class='btn btn-primary' onclick='process_machine_action_"+item+"(\""+value.item+"\")'>"+item+"</a>\n";
+        }
+    });
+    // alert (result);
+    return result
+};
+
+// $('[data-field="actions"]').data({formatter:actions_formatter});
+
 var get_machines = function(){
     $.ajax({
         url:machines_url,
@@ -41,17 +85,21 @@ var get_machines = function(){
             rows = [];
             data.forEach(function(item,index,array){
                 // action_buttons = document.createElement('div');
-                action_buttons = null;
+                action_buttons = {
+                    item:item.ip_addr,
+                    actions:['edit','remove'],
+                }
 
                 rows.push({
+                    state:false,
                     ip_addr:item.ip_addr,
                     description:item.description,
                     special_serial_numbers:item.special_serial_numbers,
                     actions:action_buttons,
                 });
             });
-            $("#machines_table").bootstrapTable('load',{data:rows});            
-            alert(rows);            
+            $("#machines_table").bootstrapTable('load',rows);
+            // alert(rows);            
         },
     });
 }
@@ -102,7 +150,7 @@ var remove_machines = function(){
     selects.forEach(function(item,index,array){
         remove_machine(item.ip_addr);
     });
-    table.bootstrapTable("refresh");
+    update_machines_table();
 }
 
 var remove_machine = function(ip){
