@@ -1,19 +1,23 @@
+machines_url = '/ip';
+general_serials_url='/general';
+
 var gebi = function(id) {
+
     return document.getElementById(id);
 }
 
 var gebi_value = function(id) {
+
     return gebi(id).value
 }
 
 var is_ip_correct = function(ip) {
+
     return true;
 }
 
-machines_url = '/ip';
-general_serials_url='/general';
-
 var update_machines_table = function(){
+
     get_machines();
 }
 
@@ -59,15 +63,14 @@ var process_machine_action_add_serial = function(data){
     target_form = $("#add_serial_number_for_machine");
     target_form.attr("target",data);
     target_form.modal("show");
-
 }
 
 var process_machine_action_remove = function(data){
-    alert("remove"+data);
+    remove_machine(data);
     get_machines();
 }
 
-actions_formatter = function(value){
+var actions_formatter = function(value){
     console.log("formatting "+ value);
     // return value;
     actions = value.actions;
