@@ -1,5 +1,6 @@
 machines_url = '/ip';
 general_serials_url='/general';
+serials_url = '/serial'
 
 var gebi = function(id) {
 
@@ -21,23 +22,45 @@ var update_machines_table = function(){
     get_machines();
 }
 
-var process_machine_action_edit = function(data){
-    // alert("edit,"+data);
-    $("#edit_machine_modal_form").attr("target",data);
+var unregister_serial = function(number){
     $.ajax({
-        url:'/ip/'+data,
+        url:serials_url+'/'+number,
+        type:'DELETE',
+        success:function(data){
+            data = JSON.parse(data);
+            alert(data.message);
+        }
+    });
+    update_machine_serials();
+}
+
+var unregister_serial_formatter = function(value){
+
+    return "<a class='btn btn-primary' onclick='unregister_serial(\""+value+"\")'>Unregister</a>\n";
+}
+
+var update_machine_serials = function(){
+    $.ajax({
+        url:'/ip/'+$("#edit_machine_modal_form").attr("target"),
         type:'GET',
         success:function(data){
             rows = [];
             data[0].special_serial_numbers.forEach(function(item,index,array){
                 rows.push({
                     serial_number:item,
+                    actions:item,
                 });
             });
             // alert(rows);
             $("#edit_machine_table").bootstrapTable('load',rows);
         }
     });
+}
+
+var process_machine_action_edit = function(data){
+    // alert("edit,"+data);
+    $("#edit_machine_modal_form").attr("target",data);
+    update_machine_serials();
     $("#edit_machine_modal_form").modal('show');
     get_machines();
 }
@@ -48,7 +71,7 @@ var register_serial_number = function(){
     number = gebi_value("new_registered_serial_number");
     gebi("new_registered_serial_number").value = "";
     $.ajax({
-        url:"/serial/"+machine,
+        url:serials_url+"/"+machine,
         method:'PUT',
         data:{
             number:number,
@@ -141,7 +164,9 @@ var add_new_general_serial_number = function(){
 
 var add_new_machine = function() {
     ip = gebi_value("machine_ip_address");
+    gebi("machine_ip_address").value = "";
     descr = gebi_value("machine_description");
+    gebi("machine_description").value = "";
     if (!is_ip_correct(ip)) {
         alert("IP is incorrect! Check it please");
     };

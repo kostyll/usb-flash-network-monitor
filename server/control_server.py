@@ -22,6 +22,7 @@ from indexpage import IndexPage
 #         print(range)
 
 class WrongIPAddressStrRepresentation(Exception):
+
     pass
 
 
@@ -45,6 +46,7 @@ class UnregisteredMassStorageObserver(object):
                 return okay
             except Exception,e:
                 return error(str(e))
+
 
 request_handler = Bottle()
 unregistered_devices = UnregisteredMassStorageObserver()
@@ -82,14 +84,17 @@ def remove_general_serial_number():
 
 @request_handler.route('/static/<path:path>')
 def serve_static_file(path):
+
     return static_file(path, root="./static")
 
 @request_handler.route('/img/<path:path>')
 def serve_image_file(path):
+
     return static_file(path, root="./img")
 
 @request_handler.get('/')
 def index_page():
+
     return indexpage.get({'menu_links':[]})
 
 @request_handler.put('/ip')
@@ -155,7 +160,19 @@ def register_serial_at_machine(machine=None):
                         )
   return ok("")
 
+@request_handler.delete('/serial/<serial>')
+def unregister_serial_at_machine(serial=None):
+  if serial is None:
+    return error("Not serial specified")
+  try:
+    client_serial = ClientSerial.get(ClientSerial.number == serial)
+    client_serial.delete_instance()
+    return ok("Deleted!")
+  except:
+    return error("Not found")
+
 def main():
+
     run(request_handler,port=8090,reloader=True)
 
 if __name__ == "__main__":

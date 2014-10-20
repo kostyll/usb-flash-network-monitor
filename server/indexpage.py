@@ -223,6 +223,12 @@ class IndexPage(object):
                                                 data_field="serial_number",
                                                 data_align="left",
                                                 )
+                                            TH(
+                                               _("Actions"),
+                                               data_field="actions",
+                                               data_align="center",
+                                               data_formatter='unregister_serial_formatter',
+                                               )
                 with DIV(id_="add_serial_number_for_machine",tabindex="-1", role="dialog",aria_labelledby="add_serial_number_for_machine",aria_hidden="true").modal.fade:
                   with DIV.modal_dialog:
                     with DIV.modal_content:
