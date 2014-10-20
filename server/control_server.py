@@ -90,6 +90,7 @@ class GeneralSerial(BaseModel):
 class ClientSerial(GeneralSerial):
 
     client = peewee.ForeignKeyField(Client)
+    number = peewee.CharField(max_length=200)
 
 
 class UnregisteredMassStorageObserver(object):
@@ -156,7 +157,7 @@ class WebFace(object):
             ("",dict(key="state",data_checkbox="true",align="center")),
             (caption_machine_ip,dict(align="center",key="ip_addr")),
             (caption_machine_desc,dict(align="left",key="description")),
-            (caption_special_serials,dict(align="left",key="special_serial_numbers")),
+            # (caption_special_serials,dict(align="left",key="special_serial_numbers")),
             (caption_machine_actions,{'align':"center",'key':"actions",'data-formatter':'actions_formatter'}),
             # (caption_machine_actions,dict(align="center",href="#",action=[action_remove]))
         ]
@@ -319,6 +320,7 @@ class WebFace(object):
                     with DIV.modal_dialog:
                         with DIV.modal_content:
                             with DIV.modal_header:
+                                # List special serial numbers
                                 with TABLE(
                                         id_="edit_machine_table",
                                         data_toggle="table",
@@ -330,6 +332,27 @@ class WebFace(object):
                                                 data_field="serial_number",
                                                 data_align="left",
                                                 )
+                with DIV(id_="add_serial_number_for_machine",tabindex="-1", role="dialog",aria_labelledby="add_serial_number_for_machine",aria_hidden="true").modal.fade:
+                  with DIV.modal_dialog:
+                    with DIV.modal_content:
+                      with DIV.modal_header:
+                        H4("Add new serial number")
+                        with FORM(role="form",action="#"):
+                          with DIV.form_group:
+                            LABEL(_("Serial number"),for_="new_registered_serial_number")
+                            INPUT(
+                                  type="text",
+                                  id_="new_registered_serial_number",
+                                  placeholder=_("type here serial number"),
+                                  class_="form-control",
+                                  )
+                          A(
+                            _("Register serial number"),
+                            id_="button_register_special_serial_number",
+                            type="submit",
+                            class_="btn btn-primary",
+                            )
+
         return out
 
     def get_ips(self):
@@ -375,6 +398,10 @@ request_handler = Bottle()
 unregistered_devices = UnregisteredMassStorageObserver()
 web_face = WebFace(ctx={'company':'USB monitor','ip':'/ip'})
 
+result = lambda status,message: simplejson.dumps({'result':status,'message':message})
+error = lambda message : result("error", message)
+ok = lambda message : result("ok",message)
+
 @request_handler.get('/unregistered/<serial:re:[a-zA-Z0-9]+>')
 def alert_unregisered_serial(serial):
 
@@ -416,17 +443,42 @@ def list_machines(machine=None):
     clients = Client.select()
     if machine is None:
         pass
+        special_serial_numbers = []
     else:
         clients = filter(lambda x:x.ip_addr==machine, clients)
+        if len(clients) == 0:
+          return error("Not found")
+        machine = Client.get(Client.ip_addr == machine)
+        special_serial_numbers = ClientSerial.select().where(ClientSerial.client == machine)
+        special_serial_numbers = map(lambda x: x.number, special_serial_numbers)
     return simplejson.dumps(map(lambda x: {
             'ip_addr':x.ip_addr,
             'description':x.description,
-            'special_serial_numbers':[],
+            'special_serial_numbers':special_serial_numbers,
             },clients))
 
 @request_handler.delete('/ip')
 def remove_machine():
     return web_face.remove_ip()
+
+@request_handler.put('/serial/<machine>')
+def register_serial_at_machine(machine=None):
+  number = request.forms.get('number')
+  try:
+    machine = Client.get(Client.ip_addr == machine)
+  except:
+    return error("")
+
+  if number is None:
+    return error("Error!")
+  try:
+    ClientSerial.get(ClientSerial.number == number,ClientSerial.client == machine)
+  except:
+    ClientSerial.create(
+                        number=number,
+                        client=machine,
+                        )
+  return ok("")
 
 def main():
     db.connect()

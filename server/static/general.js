@@ -14,28 +14,12 @@ machines_url = '/ip';
 general_serials_url='/general';
 
 var update_machines_table = function(){
-    // $.ajax({
-    //     url:machines_url,
-    //     type:'GET',
-    //     success:function(data){
-    //         data.forEach(function(item,index,array){
-    //             alert(item);
-    //         });
-    //     },
-    // });
-    // var table = $('#machines_table');
-    // table.bootstrapTable("refresh");
     get_machines();
-}
-
-var update_machines_table_action_buttons = function(){
-    var table = $("#machines_table");
-
 }
 
 var process_machine_action_edit = function(data){
     // alert("edit,"+data);
-    $("#edit_machine_modal_form").target = data;
+    $("#edit_machine_modal_form").attr("target",data);
     $.ajax({
         url:'/ip/'+data,
         type:'GET',
@@ -47,11 +31,35 @@ var process_machine_action_edit = function(data){
                 });
             });
             // alert(rows);
-            $("#edit_machine_table").bootstrapTable('load',{data:rows});
+            $("#edit_machine_table").bootstrapTable('load',rows);
         }
     });
     $("#edit_machine_modal_form").modal('show');
     get_machines();
+}
+
+var register_serial_number = function(){
+    // Register some serial number for selected machine
+    machine = $("#add_serial_number_for_machine").attr("target");
+    number = gebi_value("new_registered_serial_number");
+    gebi("new_registered_serial_number").value = "";
+    $.ajax({
+        url:"/serial/"+machine,
+        method:'PUT',
+        data:{
+            number:number,
+        },
+        success:function(data){
+            alert("serial number "+number+" registered!");
+        },
+    });
+}
+
+var process_machine_action_add_serial = function(data){
+    target_form = $("#add_serial_number_for_machine");
+    target_form.attr("target",data);
+    target_form.modal("show");
+
 }
 
 var process_machine_action_remove = function(data){
@@ -68,6 +76,8 @@ actions_formatter = function(value){
         if (item == "edit"){
             result += "<a class='btn btn-primary' onclick='process_machine_action_"+item+"(\""+value.item+"\")'>"+item+"</a>\n";
         } else if (item == "remove") {
+            result += "<a class='btn btn-primary' onclick='process_machine_action_"+item+"(\""+value.item+"\")'>"+item+"</a>\n";
+        } else if (item == "add_serial"){
             result += "<a class='btn btn-primary' onclick='process_machine_action_"+item+"(\""+value.item+"\")'>"+item+"</a>\n";
         }
     });
@@ -88,14 +98,14 @@ var get_machines = function(){
                 // action_buttons = document.createElement('div');
                 action_buttons = {
                     item:item.ip_addr,
-                    actions:['edit','remove'],
+                    actions:['add_serial','edit','remove'],
                 }
 
                 rows.push({
                     state:false,
                     ip_addr:item.ip_addr,
                     description:item.description,
-                    special_serial_numbers:item.special_serial_numbers,
+                    // special_serial_numbers:item.special_serial_numbers,
                     actions:action_buttons,
                 });
             });
@@ -195,6 +205,7 @@ var prepare = function() {
     gebi("remove_machine_button").onclick = remove_machines;
     gebi("remove_general_serial_button").onclick = remove_general_serials;
     gebi("add_new_general_serial_button").onclick = add_new_general_serial_number;
+    gebi("button_register_special_serial_number").onclick = register_serial_number;
     // alert("Prepared");
 }
 
