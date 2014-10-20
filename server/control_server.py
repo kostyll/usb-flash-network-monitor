@@ -125,7 +125,7 @@ class WebFace(object):
                 html.context = html.StrContext()
                 carred_func = lambda *args: func(self,args[0])
                 res = str(render_html(ctx, carred_func))
-                print (res)
+                # print (res)
                 return res
             return wrapper
 
@@ -157,7 +157,7 @@ class WebFace(object):
             (caption_machine_ip,dict(align="center",key="ip_addr")),
             (caption_machine_desc,dict(align="left",key="description")),
             (caption_special_serials,dict(align="left",key="special_serial_numbers")),
-            (caption_machine_actions,dict(align="center",key="actions,")),
+            (caption_machine_actions,{'align':"center",'key':"actions",'data-formatter':'actions_formatter'}),
             # (caption_machine_actions,dict(align="center",href="#",action=[action_remove]))
         ]
 
@@ -205,7 +205,7 @@ class WebFace(object):
                                        data_show_toggle="true",
                                        data_show_columns="true",
                                        data_toolbar="#custom_machines_toolbar",
-                                       # striped=True,
+                                       striped=True,
                                        # data_url='/ip',
                                        data='get_machines()',
                                        ):
@@ -218,6 +218,7 @@ class WebFace(object):
                                                data_sortable="true",
                                                data_align=column[1]['align'],
                                                data_checkbox="true" if column[1].get('data_checkbox',None) == "true" else "false",
+                                               data_formatter=column[1].get('data-formatter',''),
                                                )
                                 # with TBODY:
                                 #     for client in Client.select():
@@ -314,14 +315,25 @@ class WebFace(object):
                                        class_="btn btn-primary",
                                        )
 
+                with DIV(id_="edit_machine_modal_form",tabindex="-1", role="dialog",aria_labelledby="edit_machine_modal_form",aria_hidden="true").modal.fade:
+                    with DIV.modal_dialog:
+                        with DIV.modal_content:
+                            with DIV.modal_header:
+                                with TABLE(
+                                        id_="edit_machine_table",
+                                        data_toggle="table",
+                                    ):
+                                    with THEAD:
+                                        with TR:
+                                            TH(
+                                                _("Serial number"),
+                                                data_field="serial_number",
+                                                data_align="left",
+                                                )
         return out
 
     def get_ips(self):
-        return simplejson.dumps(map(lambda x: {
-            'ip_addr':x.ip_addr,
-            'description':x.description,
-            'special_serial_numbers':[],
-            },Client.select()))
+        pass
 
     def add_new_ip(self):
         ip = request.forms.get('ip')
@@ -397,10 +409,20 @@ def index_page():
 def add_machine():
     return web_face.add_new_ip()
 
+@request_handler.get('/ip/<machine>')
 @request_handler.get('/ip')
-def list_machines():
+def list_machines(machine=None):
     response.content_type = 'application/json; charset=latin9'
-    return web_face.get_ips()
+    clients = Client.select()
+    if machine is None:
+        pass
+    else:
+        clients = filter(lambda x:x.ip_addr==machine, clients)
+    return simplejson.dumps(map(lambda x: {
+            'ip_addr':x.ip_addr,
+            'description':x.description,
+            'special_serial_numbers':[],
+            },clients))
 
 @request_handler.delete('/ip')
 def remove_machine():
