@@ -93,7 +93,7 @@ class IndexPage(object):
                                        align="center",
                                        pagination="true",
                                        data_search="true",
-                                       data_show_refresh="true",
+                                       # data_show_refresh="true",
                                        data_show_toggle="true",
                                        data_show_columns="true",
                                        data_toolbar="#custom_machines_toolbar",
