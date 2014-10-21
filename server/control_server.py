@@ -6,7 +6,7 @@ import simplejson
 
 from models import *
 
-from indexpage import IndexPage
+from indexpage import IndexPage, LoginPage
 
 #TODO : transform loading configuration via configparser module
 
@@ -170,6 +170,10 @@ def unregister_serial_at_machine(serial=None):
     return ok("Deleted!")
   except:
     return error("Not found")
+
+@request_handler.get('/login')
+def show_login_page():
+  return LoginPage().get()
 
 def main():
 

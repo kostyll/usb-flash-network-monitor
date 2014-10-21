@@ -2,24 +2,28 @@ import html
 from html import *
 
 from copy import deepcopy
+import web_face_gen_templatete
 from web_face_gen_templatete import render_html
 from utils import _
 
+DEBUG = web_face_gen_templatete.DEBUG
+
+class rendered(object):
+
+    def __call__(self,func):
+        def wrapper(class_instance,ctx):
+            context = deepcopy(class_instance.ctx)
+            context.update(ctx)
+            ctx = context
+            html.context = html.StrContext()
+            carred_func = lambda *args: func(self,args[0])
+            res = str(render_html(ctx, carred_func))
+            # print (res)
+            return res
+        return wrapper
+
+
 class IndexPage(object):
-    class rendered(object):
-
-        def __call__(self,func):
-            def wrapper(class_instance,ctx):
-                context = deepcopy(class_instance.ctx)
-                context.update(ctx)
-                ctx = context
-                html.context = html.StrContext()
-                carred_func = lambda *args: func(self,args[0])
-                res = str(render_html(ctx, carred_func))
-                # print (res)
-                return res
-            return wrapper
-
     def __init__(self,ctx=None):
         if ctx is None:
             ctx = {}
@@ -260,3 +264,146 @@ class IndexPage(object):
             result = self.index(ctx)
             self.pages[ctx_hash] = result
             return result
+
+# <section id="login">
+#     <div class="container">
+#         <div class="row">
+#             <div class="col-xs-12">
+#                 <div class="form-wrap">
+#                 <h1>Log in with your email account</h1>
+#                     <form role="form" action="javascript:;" method="post" id="login-form" autocomplete="off">
+#                         <div class="form-group">
+#                             <label for="email" class="sr-only">Email</label>
+#                             <input type="email" name="email" id="email" class="form-control" placeholder="somebody@example.com">
+#                         </div>
+#                         <div class="form-group">
+#                             <label for="key" class="sr-only">Password</label>
+#                             <input type="password" name="key" id="key" class="form-control" placeholder="Password">
+#                         </div>
+#                         <div class="checkbox">
+#                             <span class="character-checkbox" onclick="showPassword()"></span>
+#                             <span class="label">Show password</span>
+#                         </div>
+#                         <input type="submit" id="btn-login" class="btn btn-custom btn-lg btn-block" value="Log in">
+#                     </form>
+#                     <a href="javascript:;" class="forget" data-toggle="modal" data-target=".forget-modal">Forgot your password?</a>
+#                     <hr>
+#                 </div>
+#             </div> <!-- /.col-xs-12 -->
+#         </div> <!-- /.row -->
+#     </div> <!-- /.container -->
+# </section>
+class LoginPage(object):
+    def get(self):
+        # html.context = html.StrContext()
+        # with HTML5 as out:
+        #     with HEAD:
+        #         if not DEBUG:
+        #             CSS(href='http://maxcdn.bootstrapcdn.com/bootstrap/2.3.2/css/bootstrap.min.css')
+        #             CSS(href='static/custom.css')
+        #             JS(src='http://code.jquery.com/jquery-git2.js')
+        #             JS(src='http://maxcdn.bootstrapcdn.com/bootstrap/2.3.2/js/bootstrap.min.js')
+        #         else:
+        #             CSS(href='static/bootstrap.css')
+        #             CSS(href='static/custom.css')
+        #             JS(src='static/jquery-git2.js')
+        #             JS(src='static/bootstrap.js')
+
+        #         CSS(href="static/login.css")
+        #         JS(src="static/login.js")
+        #     with BODY:
+        #         with SECTION(id_="login"):
+        #             with DIV.container:
+        #                 with DIV.row:
+        #                     # with DIV.center:
+        #                         with DIV.form_wrap:
+        #                             H1(_("Login with your email account"))
+        #                             with FORM(role="form",action="javascript:;",method="post",id_="login-form",autocomplete="off"):
+        #                                 with DIV.form_group:
+        #                                     with LABEL(for_="email").sr_only:
+        #                                         out << _("Email")
+        #                                     INPUT(type="email",name="email",id_="email",class_="form-control",placeholder=_("somebody@example.com"))
+        #                                 with DIV.form_group:
+        #                                     with LABEL(for_="key").sr_only:
+        #                                         out << _("Password")
+        #                                     INPUT(type="password",name="key",id_="key",class_="form-control",placeholder=_("Password"))
+        #                                 with DIV.checkbox:
+        #                                     with SPAN(onclick="showPassword()").character_checkbox:
+        #                                         pass
+        #                                     with SPAN.label:
+        #                                         out << _("Show password")
+        #                                 INPUT(type="submit",id_="btn-login", class_="btn btn-custom btn-lg btn-block", value=_("Log in"))
+        #                             with A(href="javascript:;",):
+        #                                 out << _("Forgot your password")
+        # return str(out)
+        return """<!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>Bootstrap, from Twitter</title>
+            <meta name="description" content="">
+            <meta name="author" content="">
+
+            <!-- Le styles -->
+            <link href="static/bootstrap.css" rel="stylesheet">
+            <style type="text/css">
+              /* Override some defaults */
+              html, body {
+                background-color: #eee;
+              }
+              body {
+                padding-top: 40px;
+              }
+              .container {
+                width: 300px;
+              }
+
+              /* The white background content wrapper */
+              .container > .content {
+                background-color: #fff;
+                padding: 20px;
+                margin: 0 -20px;
+                -webkit-border-radius: 10px 10px 10px 10px;
+                   -moz-border-radius: 10px 10px 10px 10px;
+                        border-radius: 10px 10px 10px 10px;
+                -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15);
+                   -moz-box-shadow: 0 1px 2px rgba(0,0,0,.15);
+                        box-shadow: 0 1px 2px rgba(0,0,0,.15);
+              }
+
+              .login-form {
+                margin-left: 65px;
+              }
+
+              legend {
+                margin-right: -50px;
+                font-weight: bold;
+                  color: #404040;
+              }
+
+            </style>
+
+        </head>
+        <body>
+          <div class="container">
+            <div class="content">
+              <div class="row">
+                <div class="login-form">
+                  <h2>Login</h2>
+                  <form action="">
+                    <fieldset>
+                      <div class="clearfix">
+                        <input type="text" placeholder="Username">
+                      </div>
+                      <div class="clearfix">
+                        <input type="password" placeholder="Password">
+                      </div>
+                      <button class="btn primary" type="submit">Sign in</button>
+                    </fieldset>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div> <!-- /container -->
+        </body>
+        </html>"""
