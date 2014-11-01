@@ -110,7 +110,7 @@ def is_authorized(func):
       return func(*args,**kwargs)
   return wrapper
 
-indexpage.get = is_authorized(indexpage.get)
+# indexpage.get = is_authorized(indexpage.get)
 
 @request_handler.get('/unregistered/<serial:re:[a-zA-Z0-9]+>')
 def alert_unregisered_serial(serial):
@@ -130,6 +130,7 @@ def add_new_serial_number():
   return "Ok"
 
 @request_handler.delete('/general')
+@is_authorized
 def remove_general_serial_number():
   number = request.forms.number
   try:
@@ -140,6 +141,7 @@ def remove_general_serial_number():
       pass
 
 @request_handler.route('/static/<path:path>')
+# @is_authorized
 def serve_static_file(path):
 
     return static_file(path, root="./static")
@@ -150,11 +152,13 @@ def serve_image_file(path):
     return static_file(path, root="./img")
 
 @request_handler.get('/')
+@is_authorized
 def index_page():
 
     return indexpage.get({'menu_links':[]})
 
 @request_handler.put('/ip')
+@is_authorized
 def add_machine():
   ip = request.forms.get('ip')
   descr = request.forms.get('descr')
@@ -167,6 +171,7 @@ def add_machine():
 
 @request_handler.get('/ip/<machine>')
 @request_handler.get('/ip')
+@is_authorized
 def list_machines(machine=None):
     response.content_type = 'application/json; charset=latin9'
     clients = Client.select()
@@ -187,6 +192,7 @@ def list_machines(machine=None):
             },clients))
 
 @request_handler.delete('/ip')
+@is_authorized
 def remove_machine():
   try:
       ip_addr = request.forms.ip
@@ -199,6 +205,7 @@ def remove_machine():
       pass
 
 @request_handler.put('/serial/<machine>')
+@is_authorized
 def register_serial_at_machine(machine=None):
   number = request.forms.get('number')
   try:
@@ -218,6 +225,7 @@ def register_serial_at_machine(machine=None):
   return ok("")
 
 @request_handler.delete('/serial/<serial>')
+@is_authorized
 def unregister_serial_at_machine(serial=None):
   if serial is None:
     return error("Not serial specified")
@@ -244,6 +252,7 @@ def authorize_user():
     return ok("")
 
 @request_handler.get('/logout')
+@is_authorized
 def logout():
   actual_session_manager.logout()
   return bottle.redirect('/')
