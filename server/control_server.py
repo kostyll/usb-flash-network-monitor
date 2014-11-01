@@ -1,4 +1,7 @@
 import os
+from md5 import md5
+import datetime
+now = datetime.datetime.now
 import bottle
 from bottle import run, request, Bottle, static_file, response
 
@@ -20,6 +23,10 @@ from indexpage import IndexPage, LoginPage
 #         print(list(xrange(start,stop+1)))
 #     else:
 #         print(range)
+
+auth_file = os.path.join(os.environ['HOME'],'usb_admin_auth.conf')
+admin_name,admin_pass = map(lambda x: str(x).strip(),open(auth_file,'rt').read().split('\n'))[:2]
+print (admin_name,admin_pass)
 
 class WrongIPAddressStrRepresentation(Exception):
 
@@ -48,13 +55,62 @@ class UnregisteredMassStorageObserver(object):
                 return error(str(e))
 
 
+class SingleActualSessionManager(object):
+  def __init__(self,admin_name,admin_pass,max_session_seconds=5*60):
+    self.admin_name = admin_name
+    self.admin_pass = admin_pass
+    self.last_request_time = None
+    self.current_session_hash = None
+    self.max_session_seconds = max_session_seconds
+
+  def is_valid_auth_data(self,user,password):
+    if (self.admin_name != user) or (self.admin_pass != password):
+      return False
+    else:
+      return True
+
+  def authorize(self,user,password):
+    if self.is_valid_auth_data(user, password):
+      self.last_request_time = now()
+      self.current_session_hash = md5(self.admin_name+self.admin_pass+str(self.last_request_time)).hexdigest()
+      return self.current_session_hash
+    else:
+      return None
+
+  def is_authorized(self,session_hash):
+    if self.last_request_time is None:
+      return False
+    if self.current_session_hash != session_hash:
+      return False
+    delta = now() - self.last_request_time
+    if delta.seconds >= self.max_session_seconds:
+      return False
+    return True
+
+  def logout(self):
+    self.last_request_time = None
+
+actual_session_manager = SingleActualSessionManager(admin_name, admin_pass)
 request_handler = Bottle()
 unregistered_devices = UnregisteredMassStorageObserver()
 indexpage = IndexPage(ctx={'company':'USB monitor'})
 
+
 result = lambda status,message: simplejson.dumps({'result':status,'message':message})
 error = lambda message : result("error", message)
 ok = lambda message : result("ok",message)
+
+
+def is_authorized(func):
+  def wrapper(*args,**kwargs):
+    session_hash = request.get_cookie('session_hash')
+    if not actual_session_manager.is_authorized(session_hash):
+      return bottle.redirect('/login')
+    else:
+      return func(*args,**kwargs)
+  return wrapper
+
+indexpage.get = is_authorized(indexpage.get)
 
 @request_handler.get('/unregistered/<serial:re:[a-zA-Z0-9]+>')
 def alert_unregisered_serial(serial):
@@ -67,6 +123,7 @@ def show_general_serials():
     return simplejson.dumps(map(lambda x: {'number':x.number},GeneralSerial.select()))
 
 @request_handler.put('/general')
+@is_authorized
 def add_new_serial_number():
   number = request.forms.number
   GeneralSerial.create(number=number)
@@ -174,6 +231,22 @@ def unregister_serial_at_machine(serial=None):
 @request_handler.get('/login')
 def show_login_page():
   return LoginPage().get()
+
+@request_handler.post('/login')
+def authorize_user():
+  user = request.forms.get("username")
+  password = request.forms.get("password")
+  session_hash = actual_session_manager.authorize(user, password)
+  if session_hash is None:
+    error("login or password is invalid.")
+  else:
+    response.set_header('Set-Cookie', 'session_hash={}'.format(session_hash))
+    return ok("")
+
+@request_handler.get('/logout')
+def logout():
+  actual_session_manager.logout()
+  return bottle.redirect('/')
 
 def main():
 

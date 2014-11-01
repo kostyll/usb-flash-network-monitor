@@ -293,49 +293,58 @@ class IndexPage(object):
 #         </div> <!-- /.row -->
 #     </div> <!-- /.container -->
 # </section>
+
+class COFFEE(html.TAG):
+  name = "script"
+  attrs = { 'type': 'text/coffeescript'}
+
+  def __init__(self,src):
+    super(COFFEE,self).__init__('', src=src)
+
 class LoginPage(object):
     def get(self):
-        # html.context = html.StrContext()
-        # with HTML5 as out:
-        #     with HEAD:
-        #         if not DEBUG:
-        #             CSS(href='http://maxcdn.bootstrapcdn.com/bootstrap/2.3.2/css/bootstrap.min.css')
-        #             CSS(href='static/custom.css')
-        #             JS(src='http://code.jquery.com/jquery-git2.js')
-        #             JS(src='http://maxcdn.bootstrapcdn.com/bootstrap/2.3.2/js/bootstrap.min.js')
-        #         else:
-        #             CSS(href='static/bootstrap.css')
-        #             CSS(href='static/custom.css')
-        #             JS(src='static/jquery-git2.js')
-        #             JS(src='static/bootstrap.js')
+        html.context = html.StrContext()
+        with HTML5 as out:
+            with HEAD:
+                if not DEBUG:
+                    CSS(href='http://maxcdn.bootstrapcdn.com/bootstrap/2.3.2/css/bootstrap.min.css')
+                    # CSS(href='static/custom.css')
+                    JS(src='http://code.jquery.com/jquery-git2.js')
+                    JS(src='http://maxcdn.bootstrapcdn.com/bootstrap/2.3.2/js/bootstrap.min.js')
+                else:
+                    CSS(href='static/bootstrap.css')
+                    # CSS(href='static/custom.css')
+                    JS(src='static/jquery-git2.js')
+                    JS(src='static/bootstrap.js')
 
-        #         CSS(href="static/login.css")
-        #         JS(src="static/login.js")
-        #     with BODY:
-        #         with SECTION(id_="login"):
-        #             with DIV.container:
-        #                 with DIV.row:
-        #                     # with DIV.center:
-        #                         with DIV.form_wrap:
-        #                             H1(_("Login with your email account"))
-        #                             with FORM(role="form",action="javascript:;",method="post",id_="login-form",autocomplete="off"):
-        #                                 with DIV.form_group:
-        #                                     with LABEL(for_="email").sr_only:
-        #                                         out << _("Email")
-        #                                     INPUT(type="email",name="email",id_="email",class_="form-control",placeholder=_("somebody@example.com"))
-        #                                 with DIV.form_group:
-        #                                     with LABEL(for_="key").sr_only:
-        #                                         out << _("Password")
-        #                                     INPUT(type="password",name="key",id_="key",class_="form-control",placeholder=_("Password"))
-        #                                 with DIV.checkbox:
-        #                                     with SPAN(onclick="showPassword()").character_checkbox:
-        #                                         pass
-        #                                     with SPAN.label:
-        #                                         out << _("Show password")
-        #                                 INPUT(type="submit",id_="btn-login", class_="btn btn-custom btn-lg btn-block", value=_("Log in"))
-        #                             with A(href="javascript:;",):
-        #                                 out << _("Forgot your password")
-        # return str(out)
+                CSS(href="static/login.css")
+                # JS(src="static/coffee-script.js")
+                JS(src="static/login.js")
+            with BODY:
+                with SECTION(id_="login"):
+                    with DIV.container:
+                        with DIV.row:
+                            # with DIV.center:
+                                with DIV.form_wrap:
+                                    H1(_("Login with your email account"))
+                                    with FORM(role="form",action="javascript:;",method="post",id_="login-form",autocomplete="off"):
+                                        with DIV.form_group:
+                                            with LABEL(for_="email").sr_only:
+                                                out << _("Email")
+                                            INPUT(type="email",name="email",id_="email",class_="form-control",placeholder=_("somebody@example.com"))
+                                        with DIV.form_group:
+                                            with LABEL(for_="key").sr_only:
+                                                out << _("Password")
+                                            INPUT(type="password",name="key",id_="key",class_="form-control",placeholder=_("Password"))
+                                        with DIV.checkbox:
+                                            with SPAN(onclick="showPassword()").character_checkbox:
+                                                pass
+                                            with SPAN.label:
+                                                out << _("Show password")
+                                        INPUT(type="submit",id_="btn-login", class_="btn btn-custom btn-lg btn-block", value=_("Log in"))
+                                    # with A(href="javascript:;",):
+                                    #     out << _("Forgot your password")
+        return str(out)
         return """<!DOCTYPE html>
         <html lang="en">
           <head>
@@ -382,6 +391,7 @@ class LoginPage(object):
               }
 
             </style>
+            <script src="static/login.js">
 
         </head>
         <body>
@@ -393,12 +403,12 @@ class LoginPage(object):
                   <form action="">
                     <fieldset>
                       <div class="clearfix">
-                        <input type="text" placeholder="Username">
+                        <input name="username" type="text" placeholder="Username">
                       </div>
                       <div class="clearfix">
-                        <input type="password" placeholder="Password">
+                        <input name="password" type="password" placeholder="Password">
                       </div>
-                      <button class="btn primary" type="submit">Sign in</button>
+                      <button id="login_button" class="btn primary" type="submit">Sign in</button>
                     </fieldset>
                   </form>
                 </div>
