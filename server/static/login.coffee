@@ -33,13 +33,13 @@ make_login_request = ->
         success: handle_auth_result
 
 handle_auth_result = (data) ->
-    alert "auth result"
-    alert data
-    alert data.result
+    # alert "auth result"
+    # alert data
+    # alert data.result
     if data.result == "ok"
-        alert "changing window location"
+        # alert "changing window location"
         new_locatinon = document.location.protocol + '//'+ document.location.host
-        alert new_locatinon
+        # alert new_locatinon
         window.location.href = new_locatinon
     return
 

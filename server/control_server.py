@@ -11,6 +11,8 @@ from models import *
 
 from indexpage import IndexPage, LoginPage
 
+_ = lambda x: x
+
 #TODO : transform loading configuration via configparser module
 
 # netmask = "192.168.0.11-14,17,18,19"
@@ -53,6 +55,9 @@ class UnregisteredMassStorageObserver(object):
                 return okay
             except Exception,e:
                 return error(str(e))
+    @property
+    def current_state_hash (self):
+        return md5(str(self._unregistered_serials)).hexdigest()
 
 
 class SingleActualSessionManager(object):
@@ -90,16 +95,20 @@ class SingleActualSessionManager(object):
   def logout(self):
     self.last_request_time = None
 
+
 actual_session_manager = SingleActualSessionManager(admin_name, admin_pass)
 request_handler = Bottle()
 unregistered_devices = UnregisteredMassStorageObserver()
-indexpage = IndexPage(ctx={'company':'USB monitor'})
-
+indexpage = IndexPage(ctx={
+                      'company':'USB monitor',
+                      'right_menu_links':[
+                        (_("Log out"),"/logout"),
+                        ]
+                      })
 
 result = lambda status,message: simplejson.dumps({'result':status,'message':message})
 error = lambda message : result("error", message)
 ok = lambda message : result("ok",message)
-
 
 def is_authorized(func):
   def wrapper(*args,**kwargs):
@@ -110,12 +119,17 @@ def is_authorized(func):
       return func(*args,**kwargs)
   return wrapper
 
-# indexpage.get = is_authorized(indexpage.get)
-
 @request_handler.get('/unregistered/<serial:re:[a-zA-Z0-9]+>')
 def alert_unregisered_serial(serial):
 
     print ("IP: {} - serial {} is unregistered.".format(request['REMOTE_ADDR'],serial))
+
+@request_handler.get('/system/state')
+@is_authorized
+def get_current_system_state_hash():
+    return ok(message={
+                'system_state_hash':unregistered_devices.current_state_hash
+              })
 
 @request_handler.get('/general')
 def show_general_serials():

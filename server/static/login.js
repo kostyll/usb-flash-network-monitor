@@ -45,13 +45,8 @@ make_login_request = function() {
 
 handle_auth_result = function(data) {
   var new_locatinon;
-  alert("auth result");
-  alert(data);
-  alert(data.result);
   if (data.result === "ok") {
-    alert("changing window location");
     new_locatinon = document.location.protocol + '//' + document.location.host;
-    alert(new_locatinon);
     window.location.href = new_locatinon;
   }
 };

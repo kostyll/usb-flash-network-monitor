@@ -1,5 +1,6 @@
 import os
 import peewee
+import datetime
 
 database_file = os.path.join(os.environ['HOME'],os.environ['USB_MONITOR_FILE'])
 
@@ -58,10 +59,14 @@ class BaseModel(peewee.Model):
 
 
 @maintained
+class EventType(BaseModel):
+
+    name = peewee.CharField()
+
+
+@maintained
 class Client(BaseModel):
-
     ip_addr = IPField(unique=True)
-
     description = peewee.CharField(max_length=200)
 
 
@@ -73,10 +78,14 @@ class GeneralSerial(BaseModel):
 
 @maintained
 class ClientSerial(GeneralSerial):
-
     client = peewee.ForeignKeyField(Client)
     number = peewee.CharField(max_length=200)
 
+@maintained
+class Event(BaseModel):
+    source = peewee.ForeignKeyField(Client)
+    eventtype = peewee.ForeignKeyField(EventType)
+    datetime = peewee.DateTimeField(default=datetime.datetime.now)
 
 db.connect()
 map(lambda x: x.create_table(fail_silently=True),maintained_tables)

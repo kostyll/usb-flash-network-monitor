@@ -50,6 +50,7 @@ def header(ctx):
 
 def head_links(ctx):
     links = ctx.get('menu_links')
+    right_links = ctx.get('right_menu_links')
     with UL.nav as out1:
         for link in links:
             attrs = {}
@@ -69,9 +70,9 @@ def head_links(ctx):
                 else:
                     A(link[0], class_=""+attrs.get('class_',''),href=href)
     with UL.nav.navbar_text.pull_right as out2:
-        for link in ['Profile','Log Out']:
+        for link in right_links:
             with LI:
-                A(link,class_="menu_right_buttons",href="#")
+                A(link[0],class_="menu_right_buttons",href=link[1])
 
     return out1,out2
 
