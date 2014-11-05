@@ -1,17 +1,21 @@
 import os
+import sys
 from md5 import md5
 import datetime
 now = datetime.datetime.now
 import bottle
-from bottle import run, request, Bottle, static_file, response
+from bottle import run, request, Bottle, static_file, response, ServerAdapter, debug
 
 import simplejson
 
 from models import *
 
 from indexpage import IndexPage, LoginPage
+import peewee
 
 _ = lambda x: x
+
+debug(True)
 
 #TODO : transform loading configuration via configparser module
 
@@ -26,7 +30,44 @@ _ = lambda x: x
 #     else:
 #         print(range)
 
-auth_file = os.path.join(os.environ['HOME'],'usb_admin_auth.conf')
+# Trying SSL with bottle
+# ie combo of http://www.piware.de/2011/01/creating-an-https-server-in-python/
+# and http://dgtool.blogspot.com/2011/12/ssl-encryption-in-python-bottle.html
+# without cherrypy?
+# requires ssl
+
+# to create a server certificate, run eg
+# openssl req -new -x509 -keyout server.pem -out server.pem -days 365 -nodes
+# DON'T distribute this combined private/public key to clients!
+# (see http://www.piware.de/2011/01/creating-an-https-server-in-python/#comment-11380)
+class SSLWSGIRefServer(ServerAdapter):
+    def run(self, handler):
+        from wsgiref.simple_server import make_server, WSGIRequestHandler
+        import ssl
+        if self.quiet:
+            class QuietHandler(WSGIRequestHandler):
+                def log_request(*args, **kw): pass
+            self.options['handler_class'] = QuietHandler
+        srv = make_server(self.host, self.port, handler, **self.options)
+        srv.socket = ssl.wrap_socket (
+            srv.socket,
+            certfile='server.pem',  # path to certificate
+            server_side=True)
+        srv.serve_forever()
+
+# class SSLCherryPyServer(ServerAdapter):
+#   def run(self, handler):
+#     from cherrypy import wsgiserver
+#     server = wsgiserver.CherryPyWSGIServer((self.host, self.port), handler)
+#     server.ssl_certificate = "server.pem"
+#     server.ssl_private_key = "key.pem"
+#     try:
+#       server.start()
+#     finally:
+#       server.stop()
+
+
+auth_file = os.path.join(os.environ['HOME'],os.environ['USB_CONFIG_FILE'])
 admin_name,admin_pass = map(lambda x: str(x).strip(),open(auth_file,'rt').read().split('\n'))[:2]
 print (admin_name,admin_pass)
 
@@ -97,7 +138,8 @@ class SingleActualSessionManager(object):
 
 
 actual_session_manager = SingleActualSessionManager(admin_name, admin_pass)
-request_handler = Bottle()
+request_handler = bottle.Bottle()
+
 unregistered_devices = UnregisteredMassStorageObserver()
 indexpage = IndexPage(ctx={
                       'company':'USB monitor',
@@ -252,6 +294,7 @@ def unregister_serial_at_machine(serial=None):
 
 @request_handler.get('/login')
 def show_login_page():
+
   return LoginPage().get()
 
 @request_handler.post('/login')
@@ -271,9 +314,25 @@ def logout():
   actual_session_manager.logout()
   return bottle.redirect('/')
 
-def main():
+def run_web_face(host="localhost",port=8080,):
+    srv = SSLWSGIRefServer(port=8080)#,host="0.0.0.0",)
+    run(request_handler,host=host,port=port,reloader=True,server=srv)
 
-    run(request_handler,port=8090,reloader=True)
+def main():
+    run_web_face()
+    # run(app=request_handler,reloader=True,server=SSLWSGIRefServer)
+
+    # httpd = SecureHTTPServer(('0.0.0.0',8080), request_handler)
+    # httpd.serve_forever()
+
+    # httpd.socket = ssl.wrap_socket (httpd.socket, certfile='server.pem', server_side=True)
 
 if __name__ == "__main__":
+    # euid = os.geteuid()
+    # if euid != 0:
+    #     print "Script not started as root. Running sudo.."
+    #     args = ['sudo', sys.executable] + sys.argv + [os.environ]
+    #     # the next line replaces the currently-running process with the sudo
+    #     os.execlpe('sudo', *args)
+    # print 'Running. Your euid is', euid
     main()

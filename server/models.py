@@ -51,7 +51,7 @@ class IPField(peewee.Field):
 
 peewee.SqliteDatabase.register_fields({'int':'int'})
 
-db = peewee.SqliteDatabase(database_file)
+db = peewee.SqliteDatabase(database_file, check_same_thread=False)
 
 class BaseModel(peewee.Model):
     class Meta:
