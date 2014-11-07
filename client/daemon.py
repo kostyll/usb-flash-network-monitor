@@ -172,11 +172,17 @@ class USBFlashObserver(object):
         """
         self.reporter.report(device)
 
-    def block_unregistered_serial(self,device):
+    def block_unregistered_device(self,device):
         """
         Deattach device driver
         """
-        pass
+        print ("Blocking device {}".format(device))
+        print (dir(device))
+        try:
+            device.detach_kernel_driver(0)
+        except Exception,e:
+            print (e)
+
 
     @property
     def registered_serials(self):
@@ -221,9 +227,10 @@ class Reporter(object):
         serials = list(serial)
         for serial in serials:
             try:
-                urllib2.urlopen('http://'+self.master_ip+':8090/unregistered/'+serial,timeout=2)
-            except:
-                pass
+                urllib2.urlopen('https://'+self.master_ip+':8080/unregistered/'+serial,timeout=2)
+                print ("Reported about {}".format(serial))
+            except Exception,e:
+                print (e)
 
 
 def check_sender(func):
@@ -290,7 +297,7 @@ def main():
 
     observer = pyudev.MonitorObserver(monitor,log_envent)
     observer.start()
-    bottle.run(request_handler,reloader=True)
+    bottle.run(request_handler,reloader=True,port=8091)
     while True:
         pass
 

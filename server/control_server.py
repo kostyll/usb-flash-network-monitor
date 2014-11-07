@@ -16,6 +16,7 @@ import peewee
 _ = lambda x: x
 
 debug(True)
+DEBUG=True
 
 #TODO : transform loading configuration via configparser module
 
@@ -84,10 +85,21 @@ class UnregisteredMassStorageObserver(object):
     def __init__(self):
 
         self._unregistered_serials = {}
+        self.process_update()
+
+    def process_update(self):
+        self._last_update = now()
 
     def add_unregistered_serial(self,ip,serial):
         self._unregistered_serials.setdefault(ip,[])
-        self._unregistered_serials[ip].append(serial)
+        if len(self._unregistered_serials[ip])>0:
+          try:
+            self._unregistered_serials[ip].index(serial)
+          except ValueError:
+            self._unregistered_serials[ip].append(serial)
+        else:
+          self._unregistered_serials[ip].append(serial)
+        self.process_update()
 
     def remove_unregistered_serial(self,ip,serial):
         if self._unregistered_serials.has_key(ip):
@@ -96,9 +108,16 @@ class UnregisteredMassStorageObserver(object):
                 return okay
             except Exception,e:
                 return error(str(e))
+        self.process_update()
+
+    @property
+    def list_unregistered_serials(self):
+        return self._unregistered_serials
+
     @property
     def current_state_hash (self):
-        return md5(str(self._unregistered_serials)).hexdigest()
+        session_hash = md5(str(self._unregistered_serials)+str(self._last_update)).hexdigest()
+        return session_hash
 
 
 class SingleActualSessionManager(object):
@@ -153,18 +172,26 @@ error = lambda message : result("error", message)
 ok = lambda message : result("ok",message)
 
 def is_authorized(func):
-  def wrapper(*args,**kwargs):
-    session_hash = request.get_cookie('session_hash')
-    if not actual_session_manager.is_authorized(session_hash):
-      return bottle.redirect('/login')
-    else:
-      return func(*args,**kwargs)
-  return wrapper
+  if not DEBUG:
+    def wrapper(*args,**kwargs):
+      session_hash = request.get_cookie('session_hash')
+      if not actual_session_manager.is_authorized(session_hash):
+        return bottle.redirect('/login')
+      else:
+        return func(*args,**kwargs)
+    return wrapper
+  else:
+    return func
 
 @request_handler.get('/unregistered/<serial:re:[a-zA-Z0-9]+>')
 def alert_unregisered_serial(serial):
+    ip = request['REMOTE_ADDR']
+    print ("IP: {} - serial {} is unregistered.".format(ip,serial))
+    unregistered_devices.add_unregistered_serial(ip, serial)
 
-    print ("IP: {} - serial {} is unregistered.".format(request['REMOTE_ADDR'],serial))
+@request_handler.get("/unregistered")
+def show_all_unregistered():
+    return ok(message=unregistered_devices.list_unregistered_serials)
 
 @request_handler.get('/system/state')
 @is_authorized

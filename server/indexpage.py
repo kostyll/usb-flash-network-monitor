@@ -68,6 +68,9 @@ class IndexPage(object):
         get_field_name = lambda x: ''.join(x.split(' ')).lower()
 
         with DIV.container_fluid as out:
+            with DIV.row_fluid:
+              with DIV(id_="notify"):
+                pass
             with UL.nav.nav_tabs:
                 with LI:
                     A(_("Machines"),class_="active",href="#machines",data_toggle="tab")

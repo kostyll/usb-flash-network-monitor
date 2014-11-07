@@ -1,6 +1,9 @@
 machines_url = "/ip"
 general_serials_url = "/general"
 serials_url = "/serial"
+system_state_url = "/system/state"
+unregister_serial_url = "/unregistered"
+current_state_hash = null
 
 gebi = (id) ->
   document.getElementById id
@@ -199,6 +202,60 @@ remove_general_serial = (number) ->
     success: (data) ->
   return
 
+show_unregistered_serial = (ip,serial) ->
+  nofify_panel = $("#notify")
+  notice_item = document.createElement 'a'
+  $(notice_item).addClass("btn btn-primary")
+    .html(ip+'-'+serial)
+    .appendTo(nofify_panel)
+    .click () ->
+      console.log "Clicked to serial "+ serial
+
+      return
+  return
+
+
+update_unregistered_serials = ->
+  console.log "Updating unregistered serials list"
+  $.ajax
+    url: unregister_serial_url
+    type: "GET"
+    dataType: "json"
+    success: (data) ->
+      console.log "unregistered:"
+      $.each data.message, (ip,serials) ->
+          console.log "IP"
+          console.log ip
+          console.log "Serials"
+          $.each serials, (index,serial) ->
+            console.log serial
+          return
+      return
+  return
+
+update_system_state = ->
+  $.ajax
+    url: system_state_url
+    type: "GET"
+    dataType:"json"
+    success: (data) ->
+      # console.log "system state info recived"
+      console.log data["result"]
+      if data["result"] == "ok"
+        state_hash = data["message"]["system_state_hash"]
+        console.log "state_hash"
+        console.log state_hash
+        console.log "current_state_hash"
+        console.log current_state_hash
+        if current_state_hash?
+          if current_state_hash != state_hash
+            update_unregistered_serials()
+            current_state_hash = state_hash
+        else
+          current_state_hash = state_hash
+          update_unregistered_serials()
+      return
+
 #alert("Removed!");
 prepare = ->
   update_machines_table()
@@ -207,6 +264,7 @@ prepare = ->
   gebi("remove_general_serial_button").onclick = remove_general_serials
   gebi("add_new_general_serial_button").onclick = add_new_general_serial_number
   gebi("button_register_special_serial_number").onclick = register_serial_number
+  setInterval(update_system_state,3000)
   return
 
 # alert("Prepared");
