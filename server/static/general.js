@@ -233,28 +233,27 @@ remove_general_serial = function(number) {
 };
 
 show_unregistered_serial = function(ip, serial) {
-  var nofify_panel, notice_item;
-  nofify_panel = $("#notify");
+  var notice_item, notify_panel;
+  notify_panel = $("#notify");
   notice_item = document.createElement('a');
-  $(notice_item).addClass("btn btn-primary").html(ip + '-' + serial).appendTo(nofify_panel).click(function() {
-    console.log("Clicked to serial " + serial);
+  $(notice_item).addClass("btn btn-danger").html(ip + '-' + serial).appendTo(notify_panel).click(function() {
+    console.log("Clicked to serial " + serial + " at " + ip);
   });
 };
 
 update_unregistered_serials = function() {
+  var notify_panel;
+  notify_panel = $("#notify");
+  notify_panel.html("");
   console.log("Updating unregistered serials list");
   $.ajax({
     url: unregister_serial_url,
     type: "GET",
     dataType: "json",
     success: function(data) {
-      console.log("unregistered:");
       $.each(data.message, function(ip, serials) {
-        console.log("IP");
-        console.log(ip);
-        console.log("Serials");
         $.each(serials, function(index, serial) {
-          return console.log(serial);
+          show_unregistered_serial(ip, serial);
         });
       });
     }
@@ -268,13 +267,8 @@ update_system_state = function() {
     dataType: "json",
     success: function(data) {
       var state_hash;
-      console.log(data["result"]);
       if (data["result"] === "ok") {
         state_hash = data["message"]["system_state_hash"];
-        console.log("state_hash");
-        console.log(state_hash);
-        console.log("current_state_hash");
-        console.log(current_state_hash);
         if (current_state_hash != null) {
           if (current_state_hash !== state_hash) {
             update_unregistered_serials();

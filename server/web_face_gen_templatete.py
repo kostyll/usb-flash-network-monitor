@@ -44,6 +44,9 @@ def header(ctx):
             JS(src='static/bootstrap.js')
             # JS(src='bootstrap-select.js')
             JS(src='static/bootstrap-table.js')
+        JS(src="static/thirdparty/jaml/src/Jaml.js")
+        JS(src="static/thirdparty/jaml/src/Node.js")
+        JS(src="static/thirdparty/jaml/src/Template.js")
         JS(src='static/general.js')
         TITLE(ctx.get('title','untitled'))
     return out

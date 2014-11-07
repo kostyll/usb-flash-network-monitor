@@ -28,6 +28,7 @@ class ConfigManager(object):
         self._config = configparser.ConfigParser()
         try:
             self._config.read(configuration_file)
+            print (self._config.items())
         except IOError:
             print("Configuration file({}) read-error.".format(configuration_file))
             os.sys.exit(-1)

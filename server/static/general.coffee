@@ -203,32 +203,37 @@ remove_general_serial = (number) ->
   return
 
 show_unregistered_serial = (ip,serial) ->
-  nofify_panel = $("#notify")
+  notify_panel = $("#notify")
   notice_item = document.createElement 'a'
-  $(notice_item).addClass("btn btn-primary")
+  $(notice_item).addClass("btn btn-danger")
     .html(ip+'-'+serial)
-    .appendTo(nofify_panel)
+    .appendTo(notify_panel)
     .click () ->
-      console.log "Clicked to serial "+ serial
+      console.log "Clicked to serial "+ serial + " at " + ip
 
       return
   return
 
 
 update_unregistered_serials = ->
+  notify_panel = $("#notify")
+  notify_panel.html ""
   console.log "Updating unregistered serials list"
   $.ajax
     url: unregister_serial_url
     type: "GET"
     dataType: "json"
     success: (data) ->
-      console.log "unregistered:"
+      # console.log "unregistered:"
       $.each data.message, (ip,serials) ->
-          console.log "IP"
-          console.log ip
-          console.log "Serials"
+          # console.log "Serials"
           $.each serials, (index,serial) ->
-            console.log serial
+            # console.log "IP"
+            # console.log ip
+            # console.log "Serial:"
+            # console.log serial
+            show_unregistered_serial(ip,serial)
+            return
           return
       return
   return
@@ -240,13 +245,13 @@ update_system_state = ->
     dataType:"json"
     success: (data) ->
       # console.log "system state info recived"
-      console.log data["result"]
+      # console.log data["result"]
       if data["result"] == "ok"
         state_hash = data["message"]["system_state_hash"]
-        console.log "state_hash"
-        console.log state_hash
-        console.log "current_state_hash"
-        console.log current_state_hash
+        # console.log "state_hash"
+        # console.log state_hash
+        # console.log "current_state_hash"
+        # console.log current_state_hash
         if current_state_hash?
           if current_state_hash != state_hash
             update_unregistered_serials()

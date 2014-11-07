@@ -1,0 +1,3 @@
+[submodule "server/static/thirdparty/jaml"]
+	path = server/static/thirdparty/jaml
+	url = git@github.com:edspencer/jaml.git
