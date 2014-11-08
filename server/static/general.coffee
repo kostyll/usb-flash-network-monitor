@@ -202,17 +202,50 @@ remove_general_serial = (number) ->
     success: (data) ->
   return
 
+allow = (ip,serial) ->
+  console.log "Allowed"
+  console.log serial
+
+disallow = (ip,serial) ->
+  console.log "DisAllowed"
+  console.log serial
+
 show_unregistered_serial = (ip,serial) ->
   notify_panel = $("#notify")
-  notice_item = document.createElement 'a'
-  $(notice_item).addClass("btn btn-danger")
-    .html(ip+'-'+serial)
-    .appendTo(notify_panel)
-    .click () ->
-      console.log "Clicked to serial "+ serial + " at " + ip
+  # notice_item = document.createElement 'a'
+  # $(notice_item).addClass("btn btn-danger")
+  #   .html(ip+'-'+serial)
+  #   .appendTo(notify_panel)
+  #   .click () ->
+  #     console.log "Clicked to serial "+ serial + " at " + ip
 
-      return
+  #     return
+  # return
+  dropdownbutton = Jaml.register "dropdownbutton", (ctx)->
+    div({class:"btn-group"},
+        a({
+               type:"button",
+               class:"btn btn-danger dropdown-toggle",
+               'data-toggle':"dropdown"
+          },
+          ctx.ip+'-'+ctx.serial,
+          span({class:"caret"})
+        ),
+        ul({class:"dropdown-menu",role:"menu"},
+          li(a({
+              href:"#",
+              onclick:"allow('"+ctx.ip+"','"+ctx.serial+"')"
+            },"Allow")),
+          li({class:"devider"}),
+          li(a({
+              href:"#",
+              onclick:"disallow('"+ctx.ip+"','"+ctx.serial+"')"
+            },"Disallow")),
+          )
+        )
+  $(notify_panel).append(Jaml.render("dropdownbutton",{ip:ip,serial:serial}))
   return
+
 
 
 update_unregistered_serials = ->
