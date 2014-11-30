@@ -1,5 +1,6 @@
 import os
 import sys
+import urllib2
 from md5 import md5
 import datetime
 now = datetime.datetime.now
@@ -203,7 +204,12 @@ def get_current_system_state_hash():
 @request_handler.get('/general')
 def show_general_serials():
 
-    return simplejson.dumps(map(lambda x: {'number':x.number},GeneralSerial.select()))
+    return simplejson.dumps(
+        map(
+            lambda x: {'number':x.number},
+            GeneralSerial.select()
+        )
+    )
 
 @request_handler.put('/general')
 @is_authorized
@@ -287,9 +293,30 @@ def remove_machine():
       print (e)
       pass
 
-@request_handler.put('/serial/<machine>')
+@request_handler.get('/serial')
+def list_specialized_serials():
+  ip_addr = request["REMOTE_ADDR"]
+  print "ip_addr"
+  print ip_addr
+
+  try:
+    machine = Client.get(Client.ip_addr==ip_addr)
+    print machine
+  except Exception,e:
+    print e
+    return error("Client is not in the register")
+  try:
+    serials = ClientSerial.select().where(ClientSerial.client==machine)
+    serials = [number for client_serial.number in serials]
+  except Exception,e:
+    return error("Db error")
+  return ok(serials)
+
+
+@request_handler.put('/serial')
 @is_authorized
-def register_serial_at_machine(machine=None):
+def register_serial_at_machine():
+  machine = request.forms.get('machine')
   number = request.forms.get('number')
   try:
     machine = Client.get(Client.ip_addr == machine)
@@ -305,16 +332,31 @@ def register_serial_at_machine(machine=None):
                         number=number,
                         client=machine,
                         )
+    print ("removing serial from unregistered devices")
+    unregistered_devices.remove_unregistered_serial(machine.ip_addr, number)
+    try:
+      urllib2.urlopen("http://"+machine.ip_addr+':8091'+'/updateconf',timeout=2)
+    except Exception,e:
+      return error(str(e))
   return ok("")
 
-@request_handler.delete('/serial/<serial>')
+@request_handler.delete('/serial')
 @is_authorized
-def unregister_serial_at_machine(serial=None):
+def unregister_serial_at_machine():
+  print ("deleting...") 
+  serial=request.forms.get('number')
   if serial is None:
     return error("Not serial specified")
   try:
     client_serial = ClientSerial.get(ClientSerial.number == serial)
+    machine = client_serial.client
     client_serial.delete_instance()
+    # print ("adding serial to unregistered...")
+    # unregistered_devices.add_unregistered_serial(machine.ip_addr, client_serial.number)
+    try:
+      urllib2.urlopen("http://"+machine.ip_addr+':8091'+'/updateconf',timeout=2)
+    except Exception,e:
+      return error(e)
     return ok("Deleted!")
   except:
     return error("Not found")
@@ -362,4 +404,13 @@ if __name__ == "__main__":
     #     # the next line replaces the currently-running process with the sudo
     #     os.execlpe('sudo', *args)
     # print 'Running. Your euid is', euid
-    main()
+    # new_pid = os.fork()
+    # if new_pid == 0:
+      main()
+    # else:
+    #   pid_file = open('cs.pid','wt')
+    #   pid_file.write(str(new_pid))
+    #   pid_file.close()
+    #   os.sys.exit()
+
+

@@ -3,6 +3,7 @@ import os
 import urllib2
 
 import bottle
+from bottle import request
 import simplejson
 
 import configparser
@@ -13,6 +14,10 @@ import usb.core
 import usb.util
 
 configuration_file = os.path.join(os.environ['HOME'],'registered_usb_devices')
+
+result = lambda status,message: simplejson.dumps({'result':status,'message':message})
+error = lambda message : result("error", message)
+ok = lambda message : result("ok",message)
 
 class ConfigManager(object):
     def __init__(self):
@@ -40,9 +45,19 @@ class ConfigManager(object):
         """
         Save configuration to the configuration file
         """
-        self._config['SERIALS'] = {serial:0 for serial in self.config['serials']}
-        self._config.write(open(configuration_file,'wt'))
-        os.sys.exit(-1)
+        try:
+            self._config['SERIALS'] = {serial:0 for serial in self.config['serials']}
+            print (configuration_file)
+            self._config.write(open(configuration_file,'wt'))
+            # os.sys.exit(-1)
+        except Exception,e:
+            print e
+
+    def clean_up_serials(self):
+        """
+        Clean up all the serials
+        """
+        self.config['serials'] = []
 
     def add_general_serial(self,serial):
         """
@@ -56,15 +71,28 @@ class ConfigManager(object):
     def update_master_conf(self):
         """
         Makes request to the admin.-server to retrive general list
-        of allowed(registered) serial numbers
+        of allowed(registered) serial numbers and special serials number
         """
         try:
-            general_serials_list = urllib2.urlopen('http://'+self.config['master_ip']+'/general',timeout=5)
-            for serial in general_serials_list.split('\n'):
-                self.add_general_serial(serial)
-        except Exception,e:
-            pass
+            general_serials_list = urllib2.urlopen('https://'+self.config['master_ip']+':8080'+'/general')
+            general_serials_list = simplejson.loads(general_serials_list.read())
 
+            special_serials = simplejson.loads(urllib2.urlopen('https://'+self.config['master_ip']+':8080'+'/serial').read())
+            print 'special_serials'
+            print special_serials
+            for serial in general_serials_list:
+                self.add_general_serial(serial['number'])
+            if special_serials['message'] == "ok":
+                for serial in special_serials['message']:
+                    self.add_general_serial(serial)
+            print ("[*]SERIALS ::::")
+            print (self.config['serials'])
+            self.saveconf()
+            return True
+        except Exception,e:
+            print (e)
+            return e
+        
     def remove_general_serial(self,serial):
         """
         Remove serial from general serials list in configuration
@@ -228,7 +256,7 @@ class Reporter(object):
         serials = list(serial)
         for serial in serials:
             try:
-                urllib2.urlopen('https://'+self.master_ip+':8080/unregistered/'+serial,timeout=2)
+                urllib2.urlopen('https://'+self.master_ip+':8080/unregistered/'+serial)
                 print ("Reported about {}".format(serial))
             except Exception,e:
                 print (e)
@@ -236,16 +264,16 @@ class Reporter(object):
 
 def check_sender(func):
     def wrapper(*args,**kwargs):
-        if request['REMOTE_ADDR'] == master_ip:
+        if request['REMOTE_ADDR'] == configurator.config['master_ip']:
             return func(*args,**kwargs)
         else:
             return
     return wrapper
 
-def main():
-    configurator = ConfigManager()
-    reporter = Reporter(configurator)
+configurator = ConfigManager()
+reporter = Reporter(configurator)
 
+def main():
     context = pyudev.Context()
     monitor = pyudev.Monitor.from_netlink(context)
     monitor.filter_by('block')
@@ -278,6 +306,15 @@ def main():
         except Exception,e:
             return simplejson.dumps({'result':'error'})
 
+    @request_handler.get('/updateconf')
+    @check_sender
+    def update_configuration():
+        result = configurator.update_master_conf()
+        if result == True:
+            return ok(result)
+        else:
+            return error(str(result))
+
     @request_handler.delete('/registered')
     @check_sender
     def delete_device_serial():
@@ -304,4 +341,12 @@ def main():
 
 if __name__ == "__main__":
     print ("Start monitoring ...")
+    # new_pid = os.fork()
+    # if new_pid == 0:
     main()
+    # else:
+    #     pid_file = open('daemon.pid','wt')
+    #     pid_file.write(str(new_pid))
+    #     pid_file.close()
+    #     os.sys.exit()
+    

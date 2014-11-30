@@ -19,9 +19,12 @@ update_machines_table = ->
   return
 
 unregister_serial = (number) ->
+  console.log "Unregister serial"
   $.ajax
-    url: serials_url + "/" + number
+    url: serials_url
     type: "DELETE"
+    data:
+      number:number
     success: (data) ->
       data = JSON.parse(data)
       alert data.message
@@ -63,9 +66,10 @@ register_serial_number = ->
   number = gebi_value("new_registered_serial_number")
   gebi("new_registered_serial_number").value = ""
   $.ajax
-    url: serials_url + "/" + machine
+    url: serials_url
     method: "PUT"
     data:
+      machine: machine
       number: number
     success: (data) ->
       alert "serial number " + number + " registered!"
@@ -202,13 +206,32 @@ remove_general_serial = (number) ->
     success: (data) ->
   return
 
+removeElementDiv = (ip,serial)->
+  document.getElementById(ip+serial).remove()
+
 allow = (ip,serial) ->
   console.log "Allowed"
   console.log serial
+  $.ajax
+    url: serials_url
+    type: "PUT"
+    dataType: "json"
+    data:
+      machine:ip
+      number: serial
+    success:(data)->
+      if data.result == "ok"
+        alert "ok"
+        removeElementDiv(ip,serial)
+      else
+        alert data
+        console.log data
 
 disallow = (ip,serial) ->
   console.log "DisAllowed"
   console.log serial
+  removeElementDiv(ip,serial)
+  
 
 show_unregistered_serial = (ip,serial) ->
   notify_panel = $("#notify")
@@ -222,7 +245,7 @@ show_unregistered_serial = (ip,serial) ->
   #     return
   # return
   dropdownbutton = Jaml.register "dropdownbutton", (ctx)->
-    div({class:"btn-group"},
+    div({class:"btn-group",id:ctx.ip+ctx.serial},
         a({
                type:"button",
                class:"btn btn-danger dropdown-toggle",
@@ -302,7 +325,7 @@ prepare = ->
   gebi("remove_general_serial_button").onclick = remove_general_serials
   gebi("add_new_general_serial_button").onclick = add_new_general_serial_number
   gebi("button_register_special_serial_number").onclick = register_serial_number
-  setInterval(update_system_state,3000)
+  setInterval(update_system_state,9000)
   return
 
 # alert("Prepared");
