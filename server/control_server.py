@@ -307,9 +307,9 @@ def list_specialized_serials():
     return error("Client is not in the register")
   try:
     serials = ClientSerial.select().where(ClientSerial.client==machine)
-    serials = [number for client_serial.number in serials]
+    serials = [client_serial.number for client_serial in serials]
   except Exception,e:
-    return error("Db error")
+    return error("Db error "+str(e))
   return ok(serials)
 
 

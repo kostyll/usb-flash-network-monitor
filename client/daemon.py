@@ -58,6 +58,7 @@ class ConfigManager(object):
         Clean up all the serials
         """
         self.config['serials'] = []
+        self.config['SERIALS'] = {}
 
     def add_general_serial(self,serial):
         """
@@ -80,9 +81,10 @@ class ConfigManager(object):
             special_serials = simplejson.loads(urllib2.urlopen('https://'+self.config['master_ip']+':8080'+'/serial').read())
             print 'special_serials'
             print special_serials
+            self.clean_up_serials()
             for serial in general_serials_list:
                 self.add_general_serial(serial['number'])
-            if special_serials['message'] == "ok":
+            if special_serials['result'] == "ok":
                 for serial in special_serials['message']:
                     self.add_general_serial(serial)
             print ("[*]SERIALS ::::")
@@ -309,12 +311,10 @@ def main():
     @request_handler.get('/updateconf')
     @check_sender
     def update_configuration():
-        result = configurator.update_master_conf()
-        if result == True:
-            return ok(result)
-        else:
-            return error(str(result))
-
+        yield ok("ok")
+        print ("updateconf...")
+        configurator.update_master_conf()
+        
     @request_handler.delete('/registered')
     @check_sender
     def delete_device_serial():
