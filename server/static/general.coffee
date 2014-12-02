@@ -5,6 +5,9 @@ system_state_url = "/system/state"
 unregister_serial_url = "/unregistered"
 current_state_hash = null
 
+show_message = (message) ->
+  $.notify message
+
 gebi = (id) ->
   document.getElementById id
 
@@ -27,7 +30,7 @@ unregister_serial = (number) ->
       number:number
     success: (data) ->
       data = JSON.parse(data)
-      alert data.message
+      show_message data.message
       return
   update_machine_serials()
   return
@@ -72,7 +75,7 @@ register_serial_number = ->
       machine: machine
       number: number
     success: (data) ->
-      alert "serial number " + number + " registered!"
+      show_message "serial number " + number + " registered!"
       return
   return
 
@@ -156,7 +159,7 @@ add_new_machine = ->
   gebi("machine_ip_address").value = ""
   descr = gebi_value("machine_description")
   gebi("machine_description").value = ""
-  alert "IP is incorrect! Check it please"  unless is_ip_correct(ip)
+  show_message "IP is incorrect! Check it please"  unless is_ip_correct(ip)
   $.ajax
     url: machines_url
     type: "PUT"
@@ -221,10 +224,10 @@ allow = (ip,serial) ->
       number: serial
     success:(data)->
       if data.result == "ok"
-        alert "ok"
+        show_message "ok"
         removeElementDiv(ip,serial)
       else
-        alert data
+        show_message data
         console.log data
 
 disallow = (ip,serial) ->

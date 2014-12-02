@@ -127,6 +127,7 @@ class USBFlashObserver(object):
         """
         Load configuration from configurator instance
         """
+        self.configurator.update_master_conf()        
         self._registered_usb_devices = []
         for serial in self.configurator.config['serials']:
             self._registered_usb_devices.append(serial)
@@ -188,10 +189,12 @@ class USBFlashObserver(object):
         unregistered_serials = set()
         online_devices = self.get_mass_storage_usb_devices()
         for device in online_devices:
-            serial = device.serial_number
+            serial = device.serial_number.lower()
             if not self.check_serial_existance(serial):
-                unregistered_serials.add(serial)
-                self.block_unregistered_device(device)
+                self.loadconf()
+                if not self.check_serial_existance(serial):
+                    unregistered_serials.add(serial)
+                    self.block_unregistered_device(device)
             else:
                 self.add_online_device(serial)
 

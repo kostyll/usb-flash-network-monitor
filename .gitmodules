@@ -1,3 +1,6 @@
 [submodule "server/static/thirdparty/jaml"]
 	path = server/static/thirdparty/jaml
 	url = git@github.com:edspencer/jaml.git
+[submodule "server/static/thirdparty/notifyjs"]
+	path = server/static/thirdparty/notifyjs
+	url = git@github.com:jpillora/notifyjs.git

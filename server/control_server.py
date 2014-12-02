@@ -92,6 +92,17 @@ class UnregisteredMassStorageObserver(object):
         self._last_update = now()
 
     def add_unregistered_serial(self,ip,serial):
+        serial = serial.lower()
+        try:
+          ClientSerial.get(ClientSerial.number==serial)
+          return
+        except:
+          pass
+        try:
+          GeneralSerial.get(GeneralSerial.number==serial)
+          return
+        except:
+          pass
         self._unregistered_serials.setdefault(ip,[])
         if len(self._unregistered_serials[ip])>0:
           try:
@@ -171,6 +182,13 @@ indexpage = IndexPage(ctx={
 result = lambda status,message: simplejson.dumps({'result':status,'message':message})
 error = lambda message : result("error", message)
 ok = lambda message : result("ok",message)
+
+def update_client_conf(ip_addr):
+    try:
+      urllib2.urlopen("http://"+ip_addr+':8091'+'/updateconf',timeout=2)
+      return True
+    except Exception,e:
+      return error(str(e))
 
 def is_authorized(func):
   if not DEBUG:
@@ -334,10 +352,7 @@ def register_serial_at_machine():
                         )
     print ("removing serial from unregistered devices")
     unregistered_devices.remove_unregistered_serial(machine.ip_addr, number)
-    try:
-      urllib2.urlopen("http://"+machine.ip_addr+':8091'+'/updateconf',timeout=2)
-    except Exception,e:
-      return error(str(e))
+    update_client_conf(machine.ip_addr)
   return ok("")
 
 @request_handler.delete('/serial')
@@ -353,10 +368,7 @@ def unregister_serial_at_machine():
     client_serial.delete_instance()
     # print ("adding serial to unregistered...")
     # unregistered_devices.add_unregistered_serial(machine.ip_addr, client_serial.number)
-    try:
-      urllib2.urlopen("http://"+machine.ip_addr+':8091'+'/updateconf',timeout=2)
-    except Exception,e:
-      return error(e)
+    update_client_conf(machine.ip_addr)
     return ok("Deleted!")
   except:
     return error("Not found")
