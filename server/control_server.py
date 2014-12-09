@@ -4,16 +4,21 @@ import urllib2
 from md5 import md5
 import datetime
 now = datetime.datetime.now
+
 import bottle
 from bottle import run, request, Bottle, static_file, response, ServerAdapter, debug
 
 import simplejson
+import peewee
+
+
+import epochta_sms
 
 import models
 from models import *
 
 from indexpage import IndexPage, LoginPage
-import peewee
+
 
 _ = lambda x: x
 
@@ -71,8 +76,9 @@ class SSLWSGIRefServer(ServerAdapter):
 
 
 auth_file = os.path.join(os.environ['HOME'],os.environ['USB_CONFIG_FILE'])
-admin_name,admin_pass_hash,epochta_log_pass = map(lambda x: str(x).strip(),open(auth_file,'rt').read().split('\n'))[:3]
-print (admin_name,admin_pass_hash)
+admin_name,admin_pass_hash,epochta_log_pass,adminphone = map(lambda x: str(x).strip(),open(auth_file,'rt').read().split('\n'))[:4]
+print (admin_name,admin_pass_hash,adminphone)
+epochta_login,epochta_password = epochta_log_pass.split(':')
 
 class WrongIPAddressStrRepresentation(Exception):
 
@@ -158,10 +164,12 @@ class SingleActualSessionManager(object):
   def is_authorized(self,session_hash):
     if self.last_request_time is None:
       return False
+    self.last_request_time = now()
     if self.current_session_hash != session_hash:
+      self.last_request_time = None
       return False
     delta = now() - self.last_request_time
-    if delta.seconds >= self.max_session_seconds:
+    if delta.total_seconds() >= self.max_session_seconds:
       return False
     return True
 
@@ -206,7 +214,8 @@ def is_authorized(func):
 @request_handler.get('/unregistered/<serial:re:[a-zA-Z0-9]+>')
 def alert_unregisered_serial(serial):
     ip = request['REMOTE_ADDR']
-    print ("IP: {} - serial {} is unregistered.".format(ip,serial))
+    alert_message = "IP: {} - serial {} is unregistered.".format(ip,serial)
+    print (alert_message)
     ACTION = 'UNREGISTERED_DEVICE_INSERTED'
     try:
         eventtype = models.EventType.get(models.EventType.name==ACTION)
@@ -221,6 +230,13 @@ def alert_unregisered_serial(serial):
             eventtype=eventtype
         )
     unregistered_devices.add_unregistered_serial(ip, serial)
+
+    # sending sms 
+    try:
+        epochta_sms.send_sms(epochta_login,epochta_password,'usb-monitor',alert_message,md5(str(now())).hexdigest(),adminphone)
+    except Exception,e:
+        print e
+
 
 @request_handler.get("/unregistered")
 def show_all_unregistered():
