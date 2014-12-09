@@ -1,0 +1,6 @@
+bottle
+simplejson
+configparser
+pyudev
+evdev
+pyusb
