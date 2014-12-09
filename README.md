@@ -3,6 +3,11 @@ usb-flash-network-monitor
 
 usb flash guard over network acording to the registered serial numbers
 
+![Main page](screenshots/scr1.png)
+
+![History page](screenshots/scr2.png)
+
+
 Connect SMS informing
 ---------------------
 
