@@ -3,6 +3,7 @@ general_serials_url = "/general"
 serials_url = "/serial"
 system_state_url = "/system/state"
 unregister_serial_url = "/unregistered"
+history_url = "/history"
 current_state_hash = null
 
 show_message = (message) ->
@@ -133,6 +134,27 @@ get_machines = ->
       $("#machines_table").bootstrapTable "load", rows
       return
   return
+
+get_history = (page=1,pagesize=30)->
+  $.ajax
+    url: history_url+'/'+page+'/'+pagesize
+    type: "GET"
+    dataType:"json"
+    success: (data) ->
+      rows = []
+      table = $("#history_table")
+      data.message.forEach (item, index, array) ->
+        datetime = new Date item.datetime
+        rows.push
+          date: datetime.getFullYear()+'/'+(datetime.getMonth()+1)+'/'+datetime.getDate()
+          time: datetime.getHours()+':'+datetime.getMinutes()
+          source: item.source
+          action: item.action
+          description: item.description
+        return
+      $("#history_table").bootstrapTable "load", rows
+      return
+  return  
 
 # alert(rows);
 update_general_serials_table = ->
@@ -319,6 +341,7 @@ update_system_state = ->
           current_state_hash = state_hash
           update_unregistered_serials()
       return
+  get_history()
 
 #alert("Removed!");
 prepare = ->

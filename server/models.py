@@ -86,6 +86,7 @@ class Event(BaseModel):
     source = peewee.ForeignKeyField(Client)
     eventtype = peewee.ForeignKeyField(EventType)
     datetime = peewee.DateTimeField(default=datetime.datetime.now)
+    description = peewee.CharField(max_length=200)
 
 db.connect()
 map(lambda x: x.create_table(fail_silently=True),maintained_tables)

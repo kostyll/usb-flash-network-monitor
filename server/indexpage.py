@@ -65,6 +65,15 @@ class IndexPage(object):
             (caption_general_serial_number,dict(align="left",key="number")),
         ]
 
+        history_columns = [
+            # (_('Index'),dict(align="center",key="index")),
+            (_('Date'),dict(align="center",key="date")),
+            (_('Time'),dict(align="center",key="time")),
+            (_('Source'),dict(align="center",key="source")),
+            (_('Action'),dict(align="center",key="action")),
+            (_('Description'),dict(align="center",key="description")),
+        ]
+
         get_field_name = lambda x: ''.join(x.split(' ')).lower()
 
         with DIV.container_fluid as out:
@@ -78,6 +87,8 @@ class IndexPage(object):
                     A(_("General serials"),href="#general",data_toggle="tab")
                 with LI:
                     A(_("New machine"),href="#new_machine",data_toggle="tab")
+                with LI:
+                    A(_("History"),href="#history",data_toggle="tab")
             with DIV.tab_content:
                 with DIV(id_="machines").tab_pane.active:
                     with DIV.row_fluid:
@@ -213,6 +224,39 @@ class IndexPage(object):
                                        type="submit",
                                        class_="btn btn-primary",
                                        )
+                with DIV(id_="history").tab_pane:
+                    with DIV.row_fluid:
+                        H4(_("History"),align="center")
+                    with DIV.row_fluid:
+                        with DIV.span10.offset1:
+                            with TABLE(
+                                id="history_table",
+                                data_sort_name="sheduled",
+                                data_sort_order="asc",
+                                data_toggle="table",
+                                width="100%",
+                                align="center",
+                                pagination="true",
+                                data_search="true",
+                                # data_show_refresh="true",
+                                data_show_toggle="true",
+                                data_show_columns="true",
+                                # data_toolbar="#custom_machines_toolbar",
+                                striped=True,
+                                # data_url='/ip',
+                                   data='get_history()',
+                                ):
+                                with THEAD:
+                                    with TR:
+                                        for column in history_columns:
+                                            TH(
+                                               column[0],
+                                               data_field=column[1].get('key',None),
+                                               data_sortable="true",
+                                               data_align=column[1]['align'],
+                                               data_checkbox="true" if column[1].get('data_checkbox',None) == "true" else "false",
+                                               data_formatter=column[1].get('data-formatter',''),
+                                               )   
 
                 with DIV(id_="edit_machine_modal_form",tabindex="-1", role="dialog",aria_labelledby="edit_machine_modal_form",aria_hidden="true").modal.fade:
                     with DIV.modal_dialog:

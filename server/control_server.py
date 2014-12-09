@@ -9,6 +9,7 @@ from bottle import run, request, Bottle, static_file, response, ServerAdapter, d
 
 import simplejson
 
+import models
 from models import *
 
 from indexpage import IndexPage, LoginPage
@@ -17,7 +18,7 @@ import peewee
 _ = lambda x: x
 
 debug(True)
-DEBUG=True
+DEBUG=False
 
 #TODO : transform loading configuration via configparser module
 
@@ -70,8 +71,8 @@ class SSLWSGIRefServer(ServerAdapter):
 
 
 auth_file = os.path.join(os.environ['HOME'],os.environ['USB_CONFIG_FILE'])
-admin_name,admin_pass = map(lambda x: str(x).strip(),open(auth_file,'rt').read().split('\n'))[:2]
-print (admin_name,admin_pass)
+admin_name,admin_pass_hash,epochta_log_pass = map(lambda x: str(x).strip(),open(auth_file,'rt').read().split('\n'))[:3]
+print (admin_name,admin_pass_hash)
 
 class WrongIPAddressStrRepresentation(Exception):
 
@@ -135,13 +136,13 @@ class UnregisteredMassStorageObserver(object):
 class SingleActualSessionManager(object):
   def __init__(self,admin_name,admin_pass,max_session_seconds=5*60):
     self.admin_name = admin_name
-    self.admin_pass = admin_pass
+    self.admin_pass_hash = admin_pass_hash
     self.last_request_time = None
     self.current_session_hash = None
     self.max_session_seconds = max_session_seconds
 
   def is_valid_auth_data(self,user,password):
-    if (self.admin_name != user) or (self.admin_pass != password):
+    if (self.admin_name != user) or (self.admin_pass_hash != md5(password).hexdigest()):
       return False
     else:
       return True
@@ -149,7 +150,7 @@ class SingleActualSessionManager(object):
   def authorize(self,user,password):
     if self.is_valid_auth_data(user, password):
       self.last_request_time = now()
-      self.current_session_hash = md5(self.admin_name+self.admin_pass+str(self.last_request_time)).hexdigest()
+      self.current_session_hash = md5(self.admin_name+self.admin_pass_hash+str(self.last_request_time)).hexdigest()
       return self.current_session_hash
     else:
       return None
@@ -168,7 +169,7 @@ class SingleActualSessionManager(object):
     self.last_request_time = None
 
 
-actual_session_manager = SingleActualSessionManager(admin_name, admin_pass)
+actual_session_manager = SingleActualSessionManager(admin_name, admin_pass_hash)
 request_handler = bottle.Bottle()
 
 unregistered_devices = UnregisteredMassStorageObserver()
@@ -206,6 +207,19 @@ def is_authorized(func):
 def alert_unregisered_serial(serial):
     ip = request['REMOTE_ADDR']
     print ("IP: {} - serial {} is unregistered.".format(ip,serial))
+    ACTION = 'UNREGISTERED_DEVICE_INSERTED'
+    try:
+        eventtype = models.EventType.get(models.EventType.name==ACTION)
+    except:
+        eventtype = models.EventType.create(
+                name=ACTION
+            )
+    models.Event.create(
+            datetime=now(),
+            description="inserting of unregistered device SN#{}".format(serial),
+            source=models.Client.get(Client.ip_addr==ip),
+            eventtype=eventtype
+        )
     unregistered_devices.add_unregistered_serial(ip, serial)
 
 @request_handler.get("/unregistered")
@@ -373,6 +387,42 @@ def unregister_serial_at_machine():
   except:
     return error("Not found")
 
+@request_handler.get('/history')
+@request_handler.get('/history/<page>')
+@request_handler.get('/history/<page>/<pagesize>')
+@is_authorized
+def show_history(page=1,pagesize=30):
+    try:
+        page=int(page)
+        pagesize=int(pagesize)
+        event_types=models.EventType.select()
+        event_type_dict = {item.id:item.name for item in event_types }
+        sources=models.Client.select()
+        sources_dict = {item.id:[item.ip_addr,item.description] for item in sources}
+        print "sources_dict"
+        print sources_dict
+
+        history_items = models.Event.select().paginate(page,pagesize)
+        result = []
+        print "history_items"
+        print history_items
+        for item in history_items:
+            print "item"
+            print item
+            result.append ({
+                'datetime':item.datetime.isoformat(),
+                'source':sources_dict[item.source.id],
+                'action':event_type_dict[item.eventtype.id],
+                'description': item.description,
+            })
+        print "result"
+        print result
+        return ok(result)
+    except Exception,e:
+        print "Exception:"
+        print (e)
+        return error(str(e))
+
 @request_handler.get('/login')
 def show_login_page():
 
@@ -380,12 +430,16 @@ def show_login_page():
 
 @request_handler.post('/login')
 def authorize_user():
+  print "Handling post login"
   user = request.forms.get("username")
   password = request.forms.get("password")
   session_hash = actual_session_manager.authorize(user, password)
+  print "session_hash"
+  print session_hash
   if session_hash is None:
     error("login or password is invalid.")
   else:
+    print "Setting cookie"
     response.set_header('Set-Cookie', 'session_hash={}'.format(session_hash))
     return ok("")
 
@@ -418,7 +472,10 @@ if __name__ == "__main__":
     # print 'Running. Your euid is', euid
     # new_pid = os.fork()
     # if new_pid == 0:
-      main()
+    pid_file = open('cs.pid','wt')
+    pid_file.write(str(os.getpid()))
+    pid_file.close()
+    main()
     # else:
     #   pid_file = open('cs.pid','wt')
     #   pid_file.write(str(new_pid))

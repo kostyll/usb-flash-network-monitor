@@ -131,6 +131,8 @@ class USBFlashObserver(object):
         self._registered_usb_devices = []
         for serial in self.configurator.config['serials']:
             self._registered_usb_devices.append(serial)
+        print "_registered_usb_devices"            
+        print self._registered_usb_devices
 
     def add_device_serial(self,serial):
         """
@@ -186,6 +188,7 @@ class USBFlashObserver(object):
         Returns True if there is an unregistered device in online devices list.
         Else - False.
         """
+        print ("Checking unregistered devices ...")
         unregistered_serials = set()
         online_devices = self.get_mass_storage_usb_devices()
         for device in online_devices:
@@ -197,6 +200,7 @@ class USBFlashObserver(object):
                     self.block_unregistered_device(device)
             else:
                 self.add_online_device(serial)
+        print ("Done.")
 
         self.report_unregistered_serial(unregistered_serials)
 
@@ -346,6 +350,9 @@ if __name__ == "__main__":
     print ("Start monitoring ...")
     # new_pid = os.fork()
     # if new_pid == 0:
+    pid_file = open('daemon.pid','wt')
+    pid_file.write(str(os.getpid()))
+    pid_file.close()    
     main()
     # else:
     #     pid_file = open('daemon.pid','wt')
